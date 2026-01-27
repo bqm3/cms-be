@@ -141,7 +141,7 @@ exports.createPost = async (req, res) => {
 // Admin/User: Get posts for dashboard (Admin sees all, User sees own)
 exports.getAllPostsAdmin = async (req, res) => {
   try {
-    const { category, topic, sort, search } = req.query;
+    const { category, topic, sort, search, startDate, endDate } = req.query;
     
     let where = {};
     
@@ -149,7 +149,7 @@ exports.getAllPostsAdmin = async (req, res) => {
     if (req.user.role !== 'admin') {
       where.created_by = req.user.id;
     }
-
+    
     if (category) where.category_id = category;
     if (topic) where.topic_name = topic;
     if (search) {
@@ -157,6 +157,15 @@ exports.getAllPostsAdmin = async (req, res) => {
         { title: { [Op.like]: `%${search}%` } },
         { post_title: { [Op.like]: `%${search}%` } }
       ];
+    }
+    if (startDate && endDate) {
+      where.created_at = {
+        [Op.between]: [new Date(startDate), new Date(endDate + 'T23:59:59')]
+      };
+    } else if (startDate) {
+      where.created_at = { [Op.gte]: new Date(startDate) };
+    } else if (endDate) {
+      where.created_at = { [Op.lte]: new Date(endDate + 'T23:59:59') };
     }
 
     let order = [['created_at', 'DESC']];

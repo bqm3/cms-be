@@ -1,5 +1,6 @@
 const { User } = require('../models');
 const bcrypt = require('bcryptjs');
+const { Op } = require('sequelize');
 
 exports.createUser = async (req, res) => {
   try {
@@ -38,9 +39,29 @@ exports.getAllUsers = async (req, res) => {
   try {
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
+    const { search, startDate, endDate } = req.query;
     const offset = (page - 1) * limit;
 
+    let where = {};
+    if (search) {
+      where[Op.or] = [
+        { username: { [Op.like]: `%${search}%` } },
+        { fullName: { [Op.like]: `%${search}%` } },
+        { email: { [Op.like]: `%${search}%` } }
+      ];
+    }
+    if (startDate && endDate) {
+      where.createdAt = {
+        [Op.between]: [new Date(startDate), new Date(endDate + 'T23:59:59')]
+      };
+    } else if (startDate) {
+      where.createdAt = { [Op.gte]: new Date(startDate) };
+    } else if (endDate) {
+      where.createdAt = { [Op.lte]: new Date(endDate + 'T23:59:59') };
+    }
+
     const { count, rows: users } = await User.findAndCountAll({
+      where,
       attributes: { exclude: ['password'] },
       order: [['createdAt', 'DESC']],
       limit,

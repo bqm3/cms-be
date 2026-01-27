@@ -5,7 +5,7 @@ require('dotenv').config();
 const PORT = process.env.PORT || 5000;
 
 // Sync database and start server
-sequelize.sync({ alter: true })
+sequelize.sync() // Bỏ { alter: true } tạm thời vì lỗi Too many keys (quá nhiều index)
   .then(() => {
     console.log('Database synced successfully');
     app.listen(PORT, () => {

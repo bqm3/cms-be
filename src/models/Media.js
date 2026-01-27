@@ -1,7 +1,7 @@
 const { DataTypes } = require('sequelize');
 const sequelize = require('../config/db');
 
-const Category = sequelize.define('Category', {
+const Media = sequelize.define('Media', {
   id: {
     type: DataTypes.INTEGER,
     primaryKey: true,
@@ -9,19 +9,18 @@ const Category = sequelize.define('Category', {
   },
   name: {
     type: DataTypes.STRING,
-    allowNull: false,
-    unique: true
+    allowNull: false
   },
-  slug: {
+  url: {
     type: DataTypes.STRING,
-    allowNull: true
+    allowNull: false
   },
-  image: {
-    type: DataTypes.STRING,
-    allowNull: true
+  type: {
+    type: DataTypes.ENUM('upload', 'link'),
+    defaultValue: 'upload'
   }
 }, {
   timestamps: true
 });
 
-module.exports = Category;
+module.exports = Media;

@@ -2,6 +2,7 @@ const sequelize = require('../config/db');
 const User = require('./User');
 const Post = require('./Post');
 const Category = require('./Category');
+const Media = require('./Media');
 
 // User - Post associations
 Post.belongsTo(User, { as: 'creator', foreignKey: 'created_by' });
@@ -15,5 +16,6 @@ module.exports = {
   sequelize,
   User,
   Post,
-  Category
+  Category,
+  Media
 };
