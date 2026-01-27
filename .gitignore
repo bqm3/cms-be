@@ -30,5 +30,5 @@ yarn.lock
 package-lock.json
 bun.lockb
 
-uploads
+src/uploads
 

@@ -117,7 +117,7 @@ exports.createPost = async (req, res) => {
     const slug = await generateUniqueSlug(cleanTitle);
 
     const post = await Post.create({
-      sequence_number: sequence_number ? Number(sequence_number) : null,
+      sequence_number: sequence_number ? Number(sequence_number) : 0,
       title: cleanTitle,
       post_title: (post_title ?? "").trim() || null,
       content: content ?? "",
