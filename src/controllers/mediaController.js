@@ -1,12 +1,29 @@
 const { Media } = require('../models');
+const { Op } = require('sequelize');
 
 exports.getAllMedia = async (req, res) => {
   try {
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
+    const { search, startDate, endDate } = req.query;
     const offset = (page - 1) * limit;
 
+    let where = {};
+    if (search) {
+      where.name = { [Op.like]: `%${search}%` };
+    }
+    if (startDate && endDate) {
+      where.createdAt = {
+        [Op.between]: [new Date(startDate), new Date(endDate + 'T23:59:59')]
+      };
+    } else if (startDate) {
+      where.createdAt = { [Op.gte]: new Date(startDate) };
+    } else if (endDate) {
+      where.createdAt = { [Op.lte]: new Date(endDate + 'T23:59:59') };
+    }
+
     const { count, rows: media } = await Media.findAndCountAll({
+      where,
       order: [['createdAt', 'DESC']],
       limit,
       offset
