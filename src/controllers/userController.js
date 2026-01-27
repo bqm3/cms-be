@@ -51,19 +51,19 @@ exports.getAllUsers = async (req, res) => {
       ];
     }
     if (startDate && endDate) {
-      where.createdAt = {
+      where.created_at = {
         [Op.between]: [new Date(startDate), new Date(endDate + 'T23:59:59')]
       };
     } else if (startDate) {
-      where.createdAt = { [Op.gte]: new Date(startDate) };
+      where.created_at = { [Op.gte]: new Date(startDate) };
     } else if (endDate) {
-      where.createdAt = { [Op.lte]: new Date(endDate + 'T23:59:59') };
+      where.created_at = { [Op.lte]: new Date(endDate + 'T23:59:59') };
     }
 
     const { count, rows: users } = await User.findAndCountAll({
       where,
       attributes: { exclude: ['password'] },
-      order: [['createdAt', 'DESC']],
+      order: [['created_at', 'DESC']],
       limit,
       offset
     });

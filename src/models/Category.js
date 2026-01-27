@@ -21,7 +21,9 @@ const Category = sequelize.define('Category', {
     allowNull: true
   }
 }, {
-  timestamps: true
+  timestamps: true,
+  createdAt: 'created_at',
+  updatedAt: 'updated_at'
 });
 
 module.exports = Category;
