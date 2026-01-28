@@ -15,9 +15,17 @@ const Media = sequelize.define('Media', {
     type: DataTypes.STRING,
     allowNull: false
   },
-  type: {
+  source_type: {
     type: DataTypes.ENUM('upload', 'link'),
     defaultValue: 'upload'
+  },
+  media_type_id: {
+    type: DataTypes.INTEGER,
+    allowNull: true
+  },
+  category_id: {
+    type: DataTypes.INTEGER,
+    allowNull: true
   }
 }, {
   timestamps: true,

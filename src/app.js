@@ -7,6 +7,7 @@ const postRoutes = require('./routes/postRoutes');
 const categoryRoutes = require('./routes/categoryRoutes');
 const userRoutes = require('./routes/userRoutes');
 const mediaRoutes = require('./routes/mediaRoutes');
+const mediaTypeRoutes = require('./routes/mediaTypeRoutes');
 
 const app = express();
 
@@ -37,6 +38,7 @@ app.use('/api/posts', postRoutes);
 app.use('/api/categories', categoryRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/media', mediaRoutes);
+app.use('/api/media-types', mediaTypeRoutes);
 
 // Health check
 app.get('/', (req, res) => {

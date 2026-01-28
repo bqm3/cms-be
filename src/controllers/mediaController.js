@@ -1,16 +1,22 @@
-const { Media } = require('../models');
+const { Media, Category, MediaType } = require('../models');
 const { Op } = require('sequelize');
 
 exports.getAllMedia = async (req, res) => {
   try {
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
-    const { search, startDate, endDate } = req.query;
+    const { search, startDate, endDate, category_id, media_type_id } = req.query;
     const offset = (page - 1) * limit;
 
     let where = {};
     if (search) {
       where.name = { [Op.like]: `%${search}%` };
+    }
+    if (category_id) {
+        where.category_id = category_id;
+    }
+    if (media_type_id) {
+        where.media_type_id = media_type_id;
     }
     if (startDate && endDate) {
       where.created_at = {
@@ -24,6 +30,10 @@ exports.getAllMedia = async (req, res) => {
 
     const { count, rows: media } = await Media.findAndCountAll({
       where,
+      include: [
+        { model: Category, as: 'category', attributes: ['id', 'name'] },
+        { model: MediaType, as: 'mediaType', attributes: ['id', 'name'] }
+      ],
       order: [['created_at', 'DESC']],
       limit,
       offset
@@ -42,14 +52,14 @@ exports.getAllMedia = async (req, res) => {
 
 exports.createMedia = async (req, res) => {
   try {
-    const { name, url: linkUrl } = req.body;
+    const { name, url: linkUrl, media_type_id, category_id } = req.body;
     
     let url = linkUrl || '';
-    let type = 'link';
+    let sourceType = 'link';
 
     if (req.file) {
       url = `/uploads/images/${req.file.filename}`;
-      type = 'upload';
+      sourceType = 'upload';
     }
 
     if (!url) {
@@ -59,7 +69,9 @@ exports.createMedia = async (req, res) => {
     const media = await Media.create({ 
       name: name || (req.file ? req.file.originalname : 'Unnamed'), 
       url, 
-      type 
+      source_type: sourceType,
+      media_type_id: media_type_id || null,
+      category_id: category_id || null
     });
     
     res.status(201).json(media);

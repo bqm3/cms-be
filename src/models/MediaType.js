@@ -1,7 +1,7 @@
 const { DataTypes } = require('sequelize');
 const sequelize = require('../config/db');
 
-const Category = sequelize.define('Category', {
+const MediaType = sequelize.define('MediaType', {
   id: {
     type: DataTypes.INTEGER,
     primaryKey: true,
@@ -10,7 +10,7 @@ const Category = sequelize.define('Category', {
   name: {
     type: DataTypes.STRING,
     allowNull: false,
-    unique: "uq_category_name"
+    unique: "uq_media_type_name"
   },
   slug: {
     type: DataTypes.STRING,
@@ -22,4 +22,4 @@ const Category = sequelize.define('Category', {
   updatedAt: 'updated_at'
 });
 
-module.exports = Category;
+module.exports = MediaType;

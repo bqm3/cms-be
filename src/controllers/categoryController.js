@@ -49,14 +49,8 @@ exports.getAllCategories = async (req, res) => {
 
 exports.createCategory = async (req, res) => {
   try {
-    const { name, slug, image: imageLink } = req.body;
-    
-    let image = imageLink || null;
-    if (req.file) {
-      image = `/uploads/categories/${req.file.filename}`;
-    }
-
-    const category = await Category.create({ name, slug, image });
+    const { name, slug } = req.body;
+    const category = await Category.create({ name, slug });
     res.status(201).json(category);
   } catch (err) {
     res.status(500).json({ message: err.message });
@@ -65,18 +59,12 @@ exports.createCategory = async (req, res) => {
 
 exports.updateCategory = async (req, res) => {
   try {
-    const { name, slug, image: imageLink } = req.body;
+    const { name, slug } = req.body;
     const category = await Category.findByPk(req.params.id);
     if (!category) return res.status(404).json({ message: 'Category not found' });
     
     category.name = name || category.name;
     category.slug = slug || category.slug;
-    
-    if (req.file) {
-      category.image = `/uploads/categories/${req.file.filename}`;
-    } else if (imageLink !== undefined) {
-      category.image = imageLink;
-    }
 
     await category.save();
     
