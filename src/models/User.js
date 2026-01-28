@@ -43,6 +43,10 @@ const User = sequelize.define('User', {
   avatar: {
     type: DataTypes.STRING,
     allowNull: true
+  },
+  refresh_token: {
+    type: DataTypes.TEXT,
+    allowNull: true
   }
 }, {
   timestamps: true,
