@@ -211,6 +211,40 @@ exports.approvePost = async (req, res) => {
   }
 };
 
+// Admin/Owner: Copy post
+exports.copyPost = async (req, res) => {
+  try {
+    const post = await Post.findByPk(req.params.id);
+    if (!post) return res.status(404).json({ message: 'Post not found' });
+
+    // Check permission
+    if (req.user.role !== 'admin' && post.created_by !== req.user.id) {
+      return res.status(403).json({ message: 'Unauthorized' });
+    }
+
+    const newTitle = `${post.title}`;
+    const newSlug = await generateSlug(newTitle);
+
+    const duplicatedPost = await Post.create({
+      sequence_number: post.sequence_number,
+      title: newTitle,
+      post_title: post.post_title,
+      content: post.content,
+      category_id: post.category_id,
+      topic_name: post.topic_name,
+      view_count: 0,
+      logo: post.logo,
+      slug: newSlug,
+      created_by: req.user.id,
+      is_approved: req.user.role === "admin",
+    });
+
+    res.status(201).json(duplicatedPost);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
 // Admin/Owner: Update post
 exports.updatePost = async (req, res) => {
   try {
@@ -233,12 +267,12 @@ exports.updatePost = async (req, res) => {
     
     // Auto-update slug if title changes and no slug provided, or if slug provided
     if (title && title !== post.title && !slug) {
-      post.slug = await generateUniqueSlug(title, post.id);
+      post.slug = await generateSlug(title, post.id);
     } else if (slug) {
       // If user provides a custom slug, we should still ensure it's unique
-      post.slug = await generateUniqueSlug(slug, post.id);
+      post.slug = await generateSlug(slug, post.id);
     } else if (title && !post.slug) {
-      post.slug = await generateUniqueSlug(title, post.id);
+      post.slug = await generateSlug(title, post.id);
     }
 
     if (title) post.title = title;

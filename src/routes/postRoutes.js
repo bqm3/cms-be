@@ -10,6 +10,7 @@ router.get('/public/:identifier', postController.getPostDetail);
 
 // Protected routes (User + Admin)
 router.post('/', authMiddleware, upload.single('logo'), postController.createPost);
+router.post('/:id/copy', authMiddleware, postController.copyPost);
 router.put('/:id', authMiddleware, upload.single('logo'), postController.updatePost);
 
 // Admin routes
