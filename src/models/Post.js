@@ -59,7 +59,7 @@ const Post = sequelize.define('Post', {
   slug: {
     type: DataTypes.STRING,
     allowNull: true,
-    unique: true
+    unique: "uq_post_slug"
   }
 }, {
   timestamps: true,

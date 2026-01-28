@@ -1,23 +1,12 @@
 const { Post, User, Category } = require('../models');
 const { Op } = require('sequelize');
+const crypto = require('crypto');
 const slugify = require('../utils/slugify');
 
-async function generateUniqueSlug(title, currentId = null) {
-  let slug = slugify(title);
-  let uniqueSlug = slug;
-  let count = 1;
-
-  while (true) {
-    const where = { slug: uniqueSlug };
-    if (currentId) {
-      where.id = { [Op.ne]: currentId };
-    }
-    const existingPost = await Post.findOne({ where });
-    if (!existingPost) break;
-    uniqueSlug = `${slug}-${count}`;
-    count++;
-  }
-  return uniqueSlug;
+function generateSlug(title) {
+  const baseSlug = slugify(title, { lower: true, strict: true });
+  const random = crypto.randomInt(100000, 1000000); // 6 số
+  return `${baseSlug}-${random}`;
 }
 
 // Public: Get all approved posts
@@ -83,7 +72,6 @@ exports.getPostDetail = async (req, res) => {
 // User: Create post
 exports.createPost = async (req, res) => {
   try {
-    // multer + form-data => tất cả req.body là string
     const {
       sequence_number,
       title,
@@ -100,32 +88,36 @@ exports.createPost = async (req, res) => {
 
     const cleanTitle = (title ?? "").trim();
     if (!cleanTitle) {
-      return res.status(400).json({ message: "title is required" });
+      return res.status(400).json({ message: "Tiêu đề là bắt buộc" });
     }
 
-    const catId =
-      category_id === undefined || category_id === null || String(category_id).trim() === ""
-        ? null
-        : Number(category_id);
-
-    if (catId !== null && Number.isNaN(catId)) {
-      return res.status(400).json({ message: "category_id must be a number" });
+    // ✅ category_id: cho phép null
+    let catId = null;
+    if (
+      category_id !== undefined &&
+      category_id !== null &&
+      String(category_id).trim() !== ""
+    ) {
+      catId = Number(category_id);
+      if (Number.isNaN(catId)) {
+        return res.status(400).json({ message: "Danh mục không hợp lệ" });
+      }
     }
 
     const logo = req.file ? `/uploads/${req.file.filename}` : null;
-
-    const slug = await generateUniqueSlug(cleanTitle);
+    const slug = await generateSlug(cleanTitle);
+    console.log('slug', slug)
 
     const post = await Post.create({
-      sequence_number: sequence_number ? Number(sequence_number) : 0,
+      sequence_number: Number(sequence_number) || 0,
       title: cleanTitle,
       post_title: (post_title ?? "").trim() || null,
       content: content ?? "",
-      category_id: catId,
+      category_id: catId, // ✅ null OK
       topic_name: (topic_name ?? "").trim() || null,
-      view_count: view_count ? Number(view_count) : 0,
+      view_count: Number(view_count) || 0,
       logo,
-      slug,
+      slug: slug,
       created_by: req.user.id,
       is_approved: req.user.role === "admin",
     });

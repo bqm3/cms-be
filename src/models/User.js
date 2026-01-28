@@ -10,7 +10,7 @@ const User = sequelize.define('User', {
   username: {
     type: DataTypes.STRING,
     allowNull: false,
-    unique: true
+    unique: "uq_user_name"
   },
   password: {
     type: DataTypes.STRING,
@@ -20,14 +20,14 @@ const User = sequelize.define('User', {
     type: DataTypes.ENUM('admin', 'user'),
     defaultValue: 'user'
   },
-  fullName: {
+  full_name: {
     type: DataTypes.STRING,
     allowNull: true
   },
   email: {
     type: DataTypes.STRING,
     allowNull: true,
-    unique: true,
+    unique: "uq_user_email",
     validate: {
       isEmail: true
     }
