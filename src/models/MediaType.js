@@ -15,6 +15,10 @@ const MediaType = sequelize.define('MediaType', {
   slug: {
     type: DataTypes.STRING,
     allowNull: true
+  },
+  is_deleted: {
+    type: DataTypes.INTEGER,
+    defaultValue: 0
   }
 }, {
   timestamps: true,

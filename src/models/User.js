@@ -47,6 +47,10 @@ const User = sequelize.define('User', {
   refresh_token: {
     type: DataTypes.TEXT,
     allowNull: true
+  },
+  is_deleted: {
+    type: DataTypes.INTEGER,
+    defaultValue: 0
   }
 }, {
   timestamps: true,

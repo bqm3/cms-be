@@ -22,7 +22,7 @@ exports.getPublicPosts = async (req, res) => {
       }
     }
 
-    let where = { is_approved: true };
+    let where = { is_approved: true, is_deleted: 0 };
     if (category) {
       where.category_id = category;
     }
@@ -48,7 +48,10 @@ exports.getPostDetail = async (req, res) => {
     const isNumeric = /^\d+$/.test(identifier);
     
     const post = await Post.findOne({
-      where: isNumeric ? { [Op.or]: [{ id: identifier }, { slug: identifier }] } : { slug: identifier },
+      where: {
+        ...(isNumeric ? { [Op.or]: [{ id: identifier }, { slug: identifier }] } : { slug: identifier }),
+        is_deleted: 0
+      },
       include: [
         { model: User, as: 'creator', attributes: ['username'] },
         { model: Category, as: 'category', attributes: ['name'] }
@@ -133,9 +136,9 @@ exports.createPost = async (req, res) => {
 // Admin/User: Get posts for dashboard (Admin sees all, User sees own)
 exports.getAllPostsAdmin = async (req, res) => {
   try {
-    const { category, topic, sort, search, startDate, endDate } = req.query;
+    const { category, parentCategory, topic, sort, search, startDate, endDate } = req.query;
     
-    let where = {};
+    let where = { is_deleted: 0 };
     
     // Role based filtering
     if (req.user.role !== 'admin') {
@@ -144,6 +147,11 @@ exports.getAllPostsAdmin = async (req, res) => {
     
     if (category) where.category_id = category;
     if (topic) where.topic_name = topic;
+
+    let categoryWhere = {};
+    if (parentCategory) {
+      categoryWhere.parent_id = parentCategory;
+    }
     if (search) {
       where[Op.or] = [
         { title: { [Op.like]: `%${search}%` } },
@@ -180,7 +188,13 @@ exports.getAllPostsAdmin = async (req, res) => {
       include: [
         { model: User, as: 'creator', attributes: ['username'] },
         { model: User, as: 'updater', attributes: ['username'] },
-        { model: Category, as: 'category', attributes: ['name'] }
+        { 
+          model: Category, 
+          as: 'category', 
+          attributes: ['name', 'parent_id'],
+          where: Object.keys(categoryWhere).length > 0 ? categoryWhere : undefined,
+          required: Object.keys(categoryWhere).length > 0
+        }
       ]
     });
 
@@ -198,7 +212,7 @@ exports.getAllPostsAdmin = async (req, res) => {
 // Admin: Approve post
 exports.approvePost = async (req, res) => {
   try {
-    const post = await Post.findByPk(req.params.id);
+    const post = await Post.findOne({ where: { id: req.params.id, is_deleted: 0 } });
     if (!post) return res.status(404).json({ message: 'Post not found' });
 
     post.is_approved = true;
@@ -214,7 +228,7 @@ exports.approvePost = async (req, res) => {
 // Admin/Owner: Copy post
 exports.copyPost = async (req, res) => {
   try {
-    const post = await Post.findByPk(req.params.id);
+    const post = await Post.findOne({ where: { id: req.params.id, is_deleted: 0 } });
     if (!post) return res.status(404).json({ message: 'Post not found' });
 
     // Check permission
@@ -248,7 +262,7 @@ exports.copyPost = async (req, res) => {
 // Admin/Owner: Update post
 exports.updatePost = async (req, res) => {
   try {
-    const post = await Post.findByPk(req.params.id);
+    const post = await Post.findOne({ where: { id: req.params.id, is_deleted: 0 } });
     if (!post) return res.status(404).json({ message: 'Post not found' });
 
     // Check permission
@@ -299,10 +313,11 @@ exports.updatePost = async (req, res) => {
 // Admin: Delete post
 exports.deletePost = async (req, res) => {
   try {
-    const post = await Post.findByPk(req.params.id);
+    const post = await Post.findOne({ where: { id: req.params.id, is_deleted: 0 } });
     if (!post) return res.status(404).json({ message: 'Post not found' });
 
-    await post.destroy();
+    post.is_deleted = 1;
+    await post.save();
     res.json({ message: 'Post deleted' });
   } catch (err) {
     res.status(500).json({ message: err.message });

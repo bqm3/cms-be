@@ -26,6 +26,10 @@ const Media = sequelize.define('Media', {
   category_id: {
     type: DataTypes.INTEGER,
     allowNull: true
+  },
+  is_deleted: {
+    type: DataTypes.INTEGER,
+    defaultValue: 0
   }
 }, {
   timestamps: true,

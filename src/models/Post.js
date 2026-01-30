@@ -60,6 +60,10 @@ const Post = sequelize.define('Post', {
     type: DataTypes.STRING,
     allowNull: true,
     unique: "uq_post_slug"
+  },
+  is_deleted: {
+    type: DataTypes.INTEGER,
+    defaultValue: 0
   }
 }, {
   timestamps: true,

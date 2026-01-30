@@ -8,6 +8,7 @@ const categoryRoutes = require('./routes/categoryRoutes');
 const userRoutes = require('./routes/userRoutes');
 const mediaRoutes = require('./routes/mediaRoutes');
 const mediaTypeRoutes = require('./routes/mediaTypeRoutes');
+const parentCategoryRoutes = require('./routes/parentCategoryRoutes');
 
 const app = express();
 
@@ -36,6 +37,7 @@ app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 app.use('/api/auth', authRoutes);
 app.use('/api/posts', postRoutes);
 app.use('/api/categories', categoryRoutes);
+app.use('/api/parent-categories', parentCategoryRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/media', mediaRoutes);
 app.use('/api/media-types', mediaTypeRoutes);

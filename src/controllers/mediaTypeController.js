@@ -4,7 +4,7 @@ const { Op } = require('sequelize');
 exports.getAllMediaTypes = async (req, res) => {
   try {
     const { search } = req.query;
-    let where = {};
+    let where = { is_deleted: 0 };
     if (search) {
       where.name = { [Op.like]: `%${search}%` };
     }
@@ -31,7 +31,7 @@ exports.createMediaType = async (req, res) => {
 exports.updateMediaType = async (req, res) => {
   try {
     const { name, slug } = req.body;
-    const mediaType = await MediaType.findByPk(req.params.id);
+    const mediaType = await MediaType.findOne({ where: { id: req.params.id, is_deleted: 0 } });
     if (!mediaType) return res.status(404).json({ message: 'Media Type not found' });
     mediaType.name = name || mediaType.name;
     mediaType.slug = slug || mediaType.slug;
@@ -44,9 +44,11 @@ exports.updateMediaType = async (req, res) => {
 
 exports.deleteMediaType = async (req, res) => {
   try {
-    const mediaType = await MediaType.findByPk(req.params.id);
+    const mediaType = await MediaType.findOne({ where: { id: req.params.id, is_deleted: 0 } });
     if (!mediaType) return res.status(404).json({ message: 'Media Type not found' });
-    await mediaType.destroy();
+    
+    mediaType.is_deleted = 1;
+    await mediaType.save();
     res.json({ message: 'Media Type deleted' });
   } catch (err) {
     res.status(500).json({ message: err.message });

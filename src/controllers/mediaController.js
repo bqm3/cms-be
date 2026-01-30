@@ -8,7 +8,7 @@ exports.getAllMedia = async (req, res) => {
     const { search, startDate, endDate, category_id, media_type_id } = req.query;
     const offset = (page - 1) * limit;
 
-    let where = {};
+    let where = { is_deleted: 0 };
     if (search) {
       where.name = { [Op.like]: `%${search}%` };
     }
@@ -82,10 +82,11 @@ exports.createMedia = async (req, res) => {
 
 exports.deleteMedia = async (req, res) => {
   try {
-    const media = await Media.findByPk(req.params.id);
+    const media = await Media.findOne({ where: { id: req.params.id, is_deleted: 0 } });
     if (!media) return res.status(404).json({ message: 'Media not found' });
     
-    await media.destroy();
+    media.is_deleted = 1;
+    await media.save();
     res.json({ message: 'Media deleted' });
   } catch (err) {
     res.status(500).json({ message: err.message });

@@ -7,11 +7,11 @@ exports.createUser = async (req, res) => {
     const { username, password, role, fullName, email, phone, bio } = req.body;
     const avatar = req.file ? `/uploads/${req.file.filename}` : null;
     
-    const existingUser = await User.findOne({ where: { username } });
+    const existingUser = await User.findOne({ where: { username, is_deleted: 0 } });
     if (existingUser) return res.status(400).json({ message: 'Username already exists' });
 
     if (email) {
-      const existingEmail = await User.findOne({ where: { email } });
+      const existingEmail = await User.findOne({ where: { email, is_deleted: 0 } });
       if (existingEmail) return res.status(400).json({ message: 'Email already exists' });
     }
 
@@ -42,7 +42,7 @@ exports.getAllUsers = async (req, res) => {
     const { search, startDate, endDate } = req.query;
     const offset = (page - 1) * limit;
 
-    let where = {};
+    let where = { is_deleted: 0 };
     if (search) {
       where[Op.or] = [
         { username: { [Op.like]: `%${search}%` } },
@@ -82,7 +82,7 @@ exports.getAllUsers = async (req, res) => {
 exports.updateUser = async (req, res) => {
   try {
     const { username, role, password, fullName, email, phone, bio } = req.body;
-    const user = await User.findByPk(req.params.id);
+    const user = await User.findOne({ where: { id: req.params.id, is_deleted: 0 } });
     if (!user) return res.status(404).json({ message: 'User not found' });
     
     if (username) user.username = username;
@@ -109,10 +109,11 @@ exports.updateUser = async (req, res) => {
 
 exports.deleteUser = async (req, res) => {
   try {
-    const user = await User.findByPk(req.params.id);
+    const user = await User.findOne({ where: { id: req.params.id, is_deleted: 0 } });
     if (!user) return res.status(404).json({ message: 'User not found' });
     
-    await user.destroy();
+    user.is_deleted = 1;
+    await user.save();
     res.json({ message: 'User deleted' });
   } catch (err) {
     res.status(500).json({ message: err.message });

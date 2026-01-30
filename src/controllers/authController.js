@@ -8,7 +8,7 @@ exports.register = async (req, res) => {
     const { username, password, role } = req.body;
     
     // Check if user exists
-    let user = await User.findOne({ where: { username } });
+    let user = await User.findOne({ where: { username, is_deleted: 0 } });
     if (user) {
       return res.status(400).json({ message: 'User already exists' });
     }
@@ -32,7 +32,7 @@ exports.register = async (req, res) => {
 exports.login = async (req, res) => {
   try {
     const { username, password } = req.body;
-    const user = await User.findOne({ where: { username } });
+    const user = await User.findOne({ where: { username, is_deleted: 0 } });
 
     if (!user || !(await bcrypt.compare(password, user.password))) {
       return res.status(400).json({ message: 'Invalid credentials' });
@@ -83,7 +83,7 @@ exports.refresh = async (req, res) => {
     const refreshToken = req.cookies.refreshToken;
     if (!refreshToken) return res.status(401).json({ message: 'No refresh token' });
 
-    const user = await User.findOne({ where: { refresh_token: refreshToken } });
+    const user = await User.findOne({ where: { refresh_token: refreshToken, is_deleted: 0 } });
     if (!user) return res.status(403).json({ message: 'Invalid refresh token' });
 
     jwt.verify(refreshToken, process.env.JWT_REFRESH_SECRET || 'refresh_secret_key', (err, decoded) => {
@@ -106,7 +106,7 @@ exports.logout = async (req, res) => {
   try {
     const refreshToken = req.cookies.refreshToken;
     if (refreshToken) {
-      const user = await User.findOne({ where: { refresh_token: refreshToken } });
+      const user = await User.findOne({ where: { refresh_token: refreshToken, is_deleted: 0 } });
       if (user) {
         user.refresh_token = null;
         await user.save();

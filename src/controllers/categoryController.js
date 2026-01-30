@@ -1,5 +1,6 @@
-const { Category } = require('../models');
+const { Category, ParentCategory } = require('../models');
 const { Op } = require('sequelize');
+const slugify = require('../utils/slugify');
 
 exports.getAllCategories = async (req, res) => {
   try {
@@ -7,7 +8,7 @@ exports.getAllCategories = async (req, res) => {
     const limit = req.query.limit ? parseInt(req.query.limit) : null;
     const { search, startDate, endDate } = req.query;
 
-    let where = {};
+    let where = { is_deleted: 0 };
     if (search) {
       where.name = { [Op.like]: `%${search}%` };
     }
@@ -25,6 +26,7 @@ exports.getAllCategories = async (req, res) => {
       const offset = (page - 1) * limit;
       const { count, rows: categories } = await Category.findAndCountAll({
         where,
+        include: [{ model: ParentCategory, as: 'parent', attributes: ['name', 'id'] }],
         order: [['name', 'ASC']],
         limit,
         offset
@@ -39,6 +41,7 @@ exports.getAllCategories = async (req, res) => {
 
     const categories = await Category.findAll({
       where,
+      include: [{ model: ParentCategory, as: 'parent', attributes: ['name', 'id'] }],
       order: [['name', 'ASC']]
     });
     res.json(categories);
@@ -49,8 +52,8 @@ exports.getAllCategories = async (req, res) => {
 
 exports.createCategory = async (req, res) => {
   try {
-    const { name, slug } = req.body;
-    const category = await Category.create({ name, slug });
+    const { name, slug, parent_id } = req.body;
+    const category = await Category.create({ name, slug, parent_id });
     res.status(201).json(category);
   } catch (err) {
     res.status(500).json({ message: err.message });
@@ -59,12 +62,13 @@ exports.createCategory = async (req, res) => {
 
 exports.updateCategory = async (req, res) => {
   try {
-    const { name, slug } = req.body;
-    const category = await Category.findByPk(req.params.id);
+    const { name, slug, parent_id } = req.body;
+    const category = await Category.findOne({ where: { id: req.params.id, is_deleted: 0 } });
     if (!category) return res.status(404).json({ message: 'Category not found' });
     
     category.name = name || category.name;
     category.slug = slug || category.slug;
+    if (parent_id !== undefined) category.parent_id = parent_id;
 
     await category.save();
     
@@ -76,10 +80,11 @@ exports.updateCategory = async (req, res) => {
 
 exports.deleteCategory = async (req, res) => {
   try {
-    const category = await Category.findByPk(req.params.id);
+    const category = await Category.findOne({ where: { id: req.params.id, is_deleted: 0 } });
     if (!category) return res.status(404).json({ message: 'Category not found' });
     
-    await category.destroy();
+    category.is_deleted = 1;
+    await category.save();
     res.json({ message: 'Category deleted' });
   } catch (err) {
     res.status(500).json({ message: err.message });

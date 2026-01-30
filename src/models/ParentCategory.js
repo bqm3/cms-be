@@ -1,7 +1,7 @@
 const { DataTypes } = require('sequelize');
 const sequelize = require('../config/db');
 
-const Category = sequelize.define('Category', {
+const ParentCategory = sequelize.define('ParentCategory', {
   id: {
     type: DataTypes.INTEGER,
     primaryKey: true,
@@ -10,14 +10,10 @@ const Category = sequelize.define('Category', {
   name: {
     type: DataTypes.STRING,
     allowNull: false,
-    unique: "uq_category_name"
+    unique: "uq_parent_category_name"
   },
   slug: {
     type: DataTypes.STRING,
-    allowNull: true
-  },
-  parent_id: {
-    type: DataTypes.INTEGER,
     allowNull: true
   },
   is_deleted: {
@@ -30,4 +26,4 @@ const Category = sequelize.define('Category', {
   updatedAt: 'updated_at'
 });
 
-module.exports = Category;
+module.exports = ParentCategory;
