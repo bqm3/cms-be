@@ -25,7 +25,7 @@ const Post = sequelize.define('Post', {
     allowNull: true
   },
   content: {
-    type: DataTypes.TEXT,
+    type: DataTypes.TEXT('long'),
     allowNull: true
   },
   view_count: {
