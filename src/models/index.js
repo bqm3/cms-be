@@ -5,6 +5,7 @@ const Category = require('./Category');
 const ParentCategory = require('./ParentCategory');
 const Media = require('./Media');
 const MediaType = require('./MediaType');
+const Template = require('./Template');
 
 // User - Post associations
 Post.belongsTo(User, { as: 'creator', foreignKey: 'created_by' });
@@ -26,6 +27,12 @@ Category.hasMany(Media, { foreignKey: 'category_id', as: 'media' });
 Media.belongsTo(MediaType, { foreignKey: 'media_type_id', as: 'mediaType' });
 MediaType.hasMany(Media, { foreignKey: 'media_type_id', as: 'media' });
 
+// Template associations
+Template.belongsTo(User, { as: 'creator', foreignKey: 'created_by' });
+Template.belongsTo(User, { as: 'updater', foreignKey: 'updated_by' });
+Template.belongsTo(Category, { foreignKey: 'category_id', as: 'category' });
+Category.hasMany(Template, { foreignKey: 'category_id' });
+
 module.exports = {
   sequelize,
   User,
@@ -33,5 +40,6 @@ module.exports = {
   Category,
   ParentCategory,
   Media,
-  MediaType
+  MediaType,
+  Template
 };

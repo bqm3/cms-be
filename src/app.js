@@ -9,6 +9,7 @@ const userRoutes = require('./routes/userRoutes');
 const mediaRoutes = require('./routes/mediaRoutes');
 const mediaTypeRoutes = require('./routes/mediaTypeRoutes');
 const parentCategoryRoutes = require('./routes/parentCategoryRoutes');
+const templateRoutes = require('./routes/templateRoutes');
 
 const app = express();
 
@@ -41,6 +42,7 @@ app.use('/api/parent-categories', parentCategoryRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/media', mediaRoutes);
 app.use('/api/media-types', mediaTypeRoutes);
+app.use('/api/templates', templateRoutes);
 
 // Health check
 app.get('/', (req, res) => {
