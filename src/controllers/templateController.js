@@ -22,7 +22,7 @@ exports.getPublicTemplates = async (req, res) => {
       }
     }
 
-    let where = { is_approved: true, is_deleted: 0 };
+    let where = { is_deleted: 0 };
     if (category) {
       where.category_id = category;
     }
@@ -120,7 +120,7 @@ exports.createTemplate = async (req, res) => {
       logo,
       slug: slug,
       created_by: req.user.id,
-      is_approved: req.user.role === "admin",
+      is_approved: true,
     });
 
     return res.status(201).json(template);
@@ -263,7 +263,7 @@ exports.updateTemplate = async (req, res) => {
       view_count: Number(view_count) || template.view_count,
       logo,
       updated_by: req.user.id,
-      is_approved: req.user.role === "admin" ? template.is_approved : false,
+      is_approved: true,
     });
 
     res.json(template);
