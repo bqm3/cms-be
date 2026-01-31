@@ -12,7 +12,7 @@ router.get('/public/:identifier', postController.getPostDetail);
 router.post('/', authMiddleware, upload.single('logo'), postController.createPost);
 router.post('/:id/copy', authMiddleware, postController.copyPost);
 router.put('/:id', authMiddleware, upload.single('logo'), postController.updatePost);
-
+router.put("/:id/hidden", authMiddleware, postController.setHiddenPost);
 // Admin routes
 router.get('/admin', authMiddleware, postController.getAllPostsAdmin);
 router.patch('/:id/approve', authMiddleware, adminMiddleware, postController.approvePost);

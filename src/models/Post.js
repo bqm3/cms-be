@@ -36,6 +36,10 @@ const Post = sequelize.define('Post', {
     type: DataTypes.BOOLEAN,
     defaultValue: false
   },
+  is_hidden: {
+ type: DataTypes.BOOLEAN,
+    defaultValue: false
+  },
   category_name: {
     type: DataTypes.STRING,
     allowNull: true

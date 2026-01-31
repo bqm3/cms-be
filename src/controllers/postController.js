@@ -12,34 +12,79 @@ function generateSlug(title) {
 // Public: Get all approved posts
 exports.getPublicPosts = async (req, res) => {
   try {
-    const { sort, category } = req.query; // sort=view_count:DESC
-    let order = [['sequence_number', 'ASC']];
-    
+    const {
+      sort,
+      category,
+      parentCategory,
+      search,
+      page = 1,
+      limit = 10,
+    } = req.query;
+
+    // sort
+    let order = [["sequence_number", "ASC"]];
     if (sort) {
-      const [field, direction] = sort.split(':');
-      if (['view_count', 'sequence_number', 'created_at'].includes(field)) {
-        order = [[field, direction || 'DESC']];
+      const [field, directionRaw] = String(sort).split(":");
+      const direction = (directionRaw || "DESC").toUpperCase() === "ASC" ? "ASC" : "DESC";
+      if (["view_count", "sequence_number", "created_at"].includes(field)) {
+        order = [[field, direction]];
       }
     }
 
-    let where = { is_approved: true, is_deleted: 0 };
-    if (category) {
-      where.category_id = category;
+    // where
+    const where = { is_approved: true, is_deleted: 0, is_hidden: false };
+    if (category) where.category_id = category;
+
+    if (search && String(search).trim()) {
+      const s = String(search).trim();
+      where[Op.or] = [
+        { title: { [Op.like]: `%${s}%` } },
+        { post_title: { [Op.like]: `%${s}%` } },
+        { slug: { [Op.like]: `%${s}%` } },
+      ];
     }
 
-    const posts = await Post.findAll({
+    // pagination
+    const pageNum = Math.max(parseInt(page, 10) || 1, 1);
+    const limitNum = Math.min(Math.max(parseInt(limit, 10) || 8, 1), 50);
+    const offset = (pageNum - 1) * limitNum;
+
+    // include + filter parent category
+    const include = [
+      { model: User, as: "creator", attributes: ["username"] },
+      {
+        model: Category,
+        as: "category",
+        attributes: ["id", "name", "parent_id"],
+        ...(parentCategory
+          ? { where: { parent_id: parentCategory }, required: true }
+          : {}),
+      },
+    ];
+
+    const { count, rows } = await Post.findAndCountAll({
       where,
       order,
-      include: [
-        { model: User, as: 'creator', attributes: ['username'] },
-        { model: Category, as: 'category', attributes: ['name'] }
-      ]
+      limit: limitNum,
+      offset,
+      include,
+      distinct: true,
     });
-    res.json(posts);
+
+    return res.json({
+      posts: rows,
+      pagination: {
+        page: pageNum,
+        limit: limitNum,
+        total: count,
+        totalPages: Math.ceil(count / limitNum),
+      },
+    });
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    return res.status(500).json({ message: err.message });
   }
 };
+
 
 // Public/User: Get single post and increment view
 exports.getPostDetail = async (req, res) => {
@@ -270,8 +315,12 @@ exports.updatePost = async (req, res) => {
       return res.status(403).json({ message: 'Unauthorized' });
     }
 
-    const { sequence_number, title, post_title, content, category_id, topic_name, is_approved, slug, view_count } = req.body;
+    const { sequence_number, title, post_title, content, category_id, topic_name, is_approved, slug, view_count, is_hidden  } = req.body;
     
+    if (is_hidden !== undefined) {
+  const v = is_hidden;
+  post.is_hidden = (v === true || v === "true" || v === "1" || v === 1);
+}
     if (req.file) {
       post.logo = `/uploads/${req.file.filename}`;
     }
@@ -319,6 +368,33 @@ exports.deletePost = async (req, res) => {
     post.is_deleted = 1;
     await post.save();
     res.json({ message: 'Post deleted' });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+
+
+// Admin: Toggle hidden
+exports.setHiddenPost = async (req, res) => {
+  try {
+    const post = await Post.findOne({ where: { id: req.params.id, is_deleted: 0 } });
+    if (!post) return res.status(404).json({ message: "Post not found" });
+
+    // chỉ admin được ẩn/hiện (đúng với UI của bạn)
+    if (req.user.role !== "admin") {
+      return res.status(403).json({ message: "Unauthorized" });
+    }
+
+    const raw = req.body?.is_hidden;
+    const isHidden =
+      raw === true || raw === "true" || raw === 1 || raw === "1";
+
+    post.is_hidden = isHidden;
+    post.updated_by = req.user.id;
+    await post.save();
+
+    res.json({ message: "Updated", is_hidden: post.is_hidden });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
