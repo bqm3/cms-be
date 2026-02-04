@@ -1,7 +1,7 @@
-const { Post, User, Category } = require('../models');
-const { Op } = require('sequelize');
-const crypto = require('crypto');
-const slugify = require('../utils/slugify');
+const { Post, User, Category } = require("../models");
+const { Op } = require("sequelize");
+const crypto = require("crypto");
+const slugify = require("../utils/slugify");
 
 function generateSlug(title) {
   const baseSlug = slugify(title, { lower: true, strict: true });
@@ -12,14 +12,7 @@ function generateSlug(title) {
 // Public: Get all approved posts
 exports.getPublicPosts = async (req, res) => {
   try {
-    const {
-      sort,
-      category,
-      parentCategory,
-      search,
-      page = 1,
-      limit = 10,
-    } = req.query;
+    const { sort, category, parentCategory, search, page = 1, limit = 10 } = req.query;
 
     // sort
     let order = [["sequence_number", "ASC"]];
@@ -37,11 +30,7 @@ exports.getPublicPosts = async (req, res) => {
 
     if (search && String(search).trim()) {
       const s = String(search).trim();
-      where[Op.or] = [
-        { title: { [Op.like]: `%${s}%` } },
-        { post_title: { [Op.like]: `%${s}%` } },
-        { slug: { [Op.like]: `%${s}%` } },
-      ];
+      where[Op.or] = [{ title: { [Op.like]: `%${s}%` } }, { post_title: { [Op.like]: `%${s}%` } }, { slug: { [Op.like]: `%${s}%` } }];
     }
 
     // pagination
@@ -56,9 +45,7 @@ exports.getPublicPosts = async (req, res) => {
         model: Category,
         as: "category",
         attributes: ["id", "name", "parent_id"],
-        ...(parentCategory
-          ? { where: { parent_id: parentCategory }, required: true }
-          : {}),
+        ...(parentCategory ? { where: { parent_id: parentCategory }, required: true } : {}),
       },
     ];
 
@@ -85,28 +72,27 @@ exports.getPublicPosts = async (req, res) => {
   }
 };
 
-
 // Public/User: Get single post and increment view
 exports.getPostDetail = async (req, res) => {
   try {
     const { identifier } = req.params;
     const isNumeric = /^\d+$/.test(identifier);
-    
+
     const post = await Post.findOne({
       where: {
         ...(isNumeric ? { [Op.or]: [{ id: identifier }, { slug: identifier }] } : { slug: identifier }),
-        is_deleted: 0
+        is_deleted: 0,
       },
       include: [
-        { model: User, as: 'creator', attributes: ['username'] },
-        { model: Category, as: 'category', attributes: ['name'] }
-      ]
+        { model: User, as: "creator", attributes: ["username"] },
+        { model: Category, as: "category", attributes: ["name"] },
+      ],
     });
 
-    if (!post) return res.status(404).json({ message: 'Post not found' });
-    
+    if (!post) return res.status(404).json({ message: "Post not found" });
+
     // Increment view count ONLY if in preview mode (as requested)
-    if (req.query.preview === 'true') {
+    if (req.query.preview === "true") {
       post.view_count += 1;
       await post.save();
     }
@@ -120,15 +106,7 @@ exports.getPostDetail = async (req, res) => {
 // User: Create post
 exports.createPost = async (req, res) => {
   try {
-    const {
-      sequence_number,
-      title,
-      post_title,
-      content,
-      category_id,
-      topic_name,
-      view_count,
-    } = req.body;
+    const { sequence_number, title, post_title, content, category_id, topic_name, view_count, description } = req.body;
 
     if (!req.user?.id) {
       return res.status(401).json({ message: "Unauthorized" });
@@ -141,11 +119,7 @@ exports.createPost = async (req, res) => {
 
     // ✅ category_id: cho phép null
     let catId = null;
-    if (
-      category_id !== undefined &&
-      category_id !== null &&
-      String(category_id).trim() !== ""
-    ) {
+    if (category_id !== undefined && category_id !== null && String(category_id).trim() !== "") {
       catId = Number(category_id);
       if (Number.isNaN(catId)) {
         return res.status(400).json({ message: "Danh mục không hợp lệ" });
@@ -154,7 +128,7 @@ exports.createPost = async (req, res) => {
 
     const logo = req.file ? `/uploads/${req.file.filename}` : null;
     const slug = await generateSlug(cleanTitle);
-    console.log('slug', slug)
+    console.log("slug", slug);
 
     const post = await Post.create({
       sequence_number: Number(sequence_number) || 0,
@@ -166,6 +140,7 @@ exports.createPost = async (req, res) => {
       view_count: Number(view_count) || 0,
       logo,
       slug: slug,
+      description: description || null,
       created_by: req.user.id,
       is_approved: req.user.role === "admin",
     });
@@ -177,19 +152,18 @@ exports.createPost = async (req, res) => {
   }
 };
 
-
 // Admin/User: Get posts for dashboard (Admin sees all, User sees own)
 exports.getAllPostsAdmin = async (req, res) => {
   try {
     const { category, parentCategory, topic, sort, search, startDate, endDate } = req.query;
-    
+
     let where = { is_deleted: 0 };
-    
+
     // Role based filtering
-    if (req.user.role !== 'admin') {
+    if (req.user.role !== "admin") {
       where.created_by = req.user.id;
     }
-    
+
     if (category) where.category_id = category;
     if (topic) where.topic_name = topic;
 
@@ -198,25 +172,22 @@ exports.getAllPostsAdmin = async (req, res) => {
       categoryWhere.parent_id = parentCategory;
     }
     if (search) {
-      where[Op.or] = [
-        { title: { [Op.like]: `%${search}%` } },
-        { post_title: { [Op.like]: `%${search}%` } }
-      ];
+      where[Op.or] = [{ title: { [Op.like]: `%${search}%` } }, { post_title: { [Op.like]: `%${search}%` } }];
     }
     if (startDate && endDate) {
       where.created_at = {
-        [Op.between]: [new Date(startDate), new Date(endDate + 'T23:59:59')]
+        [Op.between]: [new Date(startDate), new Date(endDate + "T23:59:59")],
       };
     } else if (startDate) {
       where.created_at = { [Op.gte]: new Date(startDate) };
     } else if (endDate) {
-      where.created_at = { [Op.lte]: new Date(endDate + 'T23:59:59') };
+      where.created_at = { [Op.lte]: new Date(endDate + "T23:59:59") };
     }
 
-    let order = [['created_at', 'DESC']];
+    let order = [["created_at", "DESC"]];
     if (sort) {
       try {
-        const [field, direction] = sort.split(':');
+        const [field, direction] = sort.split(":");
         order = [[field, direction]];
       } catch (e) {}
     }
@@ -231,23 +202,23 @@ exports.getAllPostsAdmin = async (req, res) => {
       limit,
       offset,
       include: [
-        { model: User, as: 'creator', attributes: ['username'] },
-        { model: User, as: 'updater', attributes: ['username'] },
-        { 
-          model: Category, 
-          as: 'category', 
-          attributes: ['name', 'parent_id'],
+        { model: User, as: "creator", attributes: ["username"] },
+        { model: User, as: "updater", attributes: ["username"] },
+        {
+          model: Category,
+          as: "category",
+          attributes: ["name", "parent_id"],
           where: Object.keys(categoryWhere).length > 0 ? categoryWhere : undefined,
-          required: Object.keys(categoryWhere).length > 0
-        }
-      ]
+          required: Object.keys(categoryWhere).length > 0,
+        },
+      ],
     });
 
     res.json({
       posts,
       total: count,
       totalPages: Math.ceil(count / limit),
-      currentPage: page
+      currentPage: page,
     });
   } catch (err) {
     res.status(500).json({ message: err.message });
@@ -258,13 +229,13 @@ exports.getAllPostsAdmin = async (req, res) => {
 exports.approvePost = async (req, res) => {
   try {
     const post = await Post.findOne({ where: { id: req.params.id, is_deleted: 0 } });
-    if (!post) return res.status(404).json({ message: 'Post not found' });
+    if (!post) return res.status(404).json({ message: "Post not found" });
 
     post.is_approved = true;
     post.updated_by = req.user.id;
     await post.save();
 
-    res.json({ message: 'Post approved' });
+    res.json({ message: "Post approved" });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
@@ -274,11 +245,11 @@ exports.approvePost = async (req, res) => {
 exports.copyPost = async (req, res) => {
   try {
     const post = await Post.findOne({ where: { id: req.params.id, is_deleted: 0 } });
-    if (!post) return res.status(404).json({ message: 'Post not found' });
+    if (!post) return res.status(404).json({ message: "Post not found" });
 
     // Check permission
-    if (req.user.role !== 'admin' && post.created_by !== req.user.id) {
-      return res.status(403).json({ message: 'Unauthorized' });
+    if (req.user.role !== "admin" && post.created_by !== req.user.id) {
+      return res.status(403).json({ message: "Unauthorized" });
     }
 
     const newTitle = `${post.title}`;
@@ -294,6 +265,7 @@ exports.copyPost = async (req, res) => {
       view_count: 0,
       logo: post.logo,
       slug: newSlug,
+      description: post.description,
       created_by: req.user.id,
       is_approved: req.user.role === "admin",
     });
@@ -308,26 +280,26 @@ exports.copyPost = async (req, res) => {
 exports.updatePost = async (req, res) => {
   try {
     const post = await Post.findOne({ where: { id: req.params.id, is_deleted: 0 } });
-    if (!post) return res.status(404).json({ message: 'Post not found' });
+    if (!post) return res.status(404).json({ message: "Post not found" });
 
     // Check permission
-    if (req.user.role !== 'admin' && post.created_by !== req.user.id) {
-      return res.status(403).json({ message: 'Unauthorized' });
+    if (req.user.role !== "admin" && post.created_by !== req.user.id) {
+      return res.status(403).json({ message: "Unauthorized" });
     }
 
-    const { sequence_number, title, post_title, content, category_id, topic_name, is_approved, slug, view_count, is_hidden  } = req.body;
-    
+    const { sequence_number, title, post_title, content, category_id, topic_name, is_approved, slug, view_count, is_hidden, description } = req.body;
+
     if (is_hidden !== undefined) {
-  const v = is_hidden;
-  post.is_hidden = (v === true || v === "true" || v === "1" || v === 1);
-}
+      const v = is_hidden;
+      post.is_hidden = v === true || v === "true" || v === "1" || v === 1;
+    }
     if (req.file) {
       post.logo = `/uploads/${req.file.filename}`;
     }
 
     if (sequence_number !== undefined) post.sequence_number = sequence_number;
     if (view_count !== undefined) post.view_count = view_count;
-    
+
     // Auto-update slug if title changes and no slug provided, or if slug provided
     if (title && title !== post.title && !slug) {
       post.slug = await generateSlug(title, post.id);
@@ -343,12 +315,13 @@ exports.updatePost = async (req, res) => {
     if (content) post.content = content;
     if (category_id) post.category_id = category_id;
     if (topic_name) post.topic_name = topic_name;
-    
+    if (description !== undefined) post.description = description;
+
     post.updated_by = req.user.id;
 
-    if (req.user.role === 'admin' && is_approved !== undefined) {
+    if (req.user.role === "admin" && is_approved !== undefined) {
       post.is_approved = is_approved;
-    } else if (req.user.role !== 'admin') {
+    } else if (req.user.role !== "admin") {
       post.is_approved = false; // Re-approval needed if user edits
     }
 
@@ -363,17 +336,15 @@ exports.updatePost = async (req, res) => {
 exports.deletePost = async (req, res) => {
   try {
     const post = await Post.findOne({ where: { id: req.params.id, is_deleted: 0 } });
-    if (!post) return res.status(404).json({ message: 'Post not found' });
+    if (!post) return res.status(404).json({ message: "Post not found" });
 
     post.is_deleted = 1;
     await post.save();
-    res.json({ message: 'Post deleted' });
+    res.json({ message: "Post deleted" });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
 };
-
-
 
 // Admin: Toggle hidden
 exports.setHiddenPost = async (req, res) => {
@@ -387,8 +358,7 @@ exports.setHiddenPost = async (req, res) => {
     }
 
     const raw = req.body?.is_hidden;
-    const isHidden =
-      raw === true || raw === "true" || raw === 1 || raw === "1";
+    const isHidden = raw === true || raw === "true" || raw === 1 || raw === "1";
 
     post.is_hidden = isHidden;
     post.updated_by = req.user.id;
