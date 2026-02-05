@@ -1,9 +1,6 @@
-// routes/sitemap.js
 const express = require("express");
-const router = express.Router();
 const zlib = require("zlib");
 
-// helper escape xml
 function escXml(s = "") {
   return String(s)
     .replaceAll("&", "&amp;")
@@ -20,9 +17,10 @@ function toIsoDate(d) {
   return dt.toISOString();
 }
 
-module.exports = function sitemapRouter(db, opts = {}) {
+module.exports = function sitemapRouter(sequelize, opts = {}) {
+  const router = express.Router();
+
   const {
-    // ✅ Nhớ để full https://...
     siteUrl = process.env.SITE_URL || "https://globalpromotionllc.com",
     enableGzip = true,
     maxUrls = 50000,
@@ -31,17 +29,12 @@ module.exports = function sitemapRouter(db, opts = {}) {
 
   router.get("/sitemap.xml", async (req, res, next) => {
     try {
-      // ✅ nếu SITE_URL không set thì fallback host runtime
       const origin =
         siteUrl ||
         `${req.protocol}://${req.get("x-forwarded-host") || req.get("host")}`;
 
-      // ====== Query DB (đúng schema của bạn) ======
-      // posts: chỉ lấy bài public
-      // - is_deleted = 0
-      // - is_hidden = 0 (false)
-      // - is_approved = 1 (true)
-      const [posts] = await db.query(
+      // ✅ Sequelize raw query trả về [rows, meta]
+      const [posts] = await sequelize.query(
         `
         SELECT slug, updated_at
         FROM posts
@@ -50,35 +43,26 @@ module.exports = function sitemapRouter(db, opts = {}) {
           AND (is_approved = 1 OR is_approved IS NULL)
           AND slug IS NOT NULL AND slug <> ''
         ORDER BY updated_at DESC
-        LIMIT ?
-        `,
-        [maxUrls]
+        LIMIT ${Number(maxUrls)}
+        `
       );
 
-      const [cats] = await db.query(
+      const [cats] = await sequelize.query(
         `
         SELECT slug, updated_at
         FROM categories
         WHERE is_deleted = 0
           AND slug IS NOT NULL AND slug <> ''
         ORDER BY updated_at DESC
-        LIMIT ?
-        `,
-        [maxUrls]
+        LIMIT ${Number(maxUrls)}
+        `
       );
 
-      // ====== Build url list ======
       const urls = [];
 
-      // homepage
-      urls.push({
-        loc: `${origin}/`,
-        changefreq: "daily",
-        priority: "1.0",
-      });
+      urls.push({ loc: `${origin}/`, changefreq: "daily", priority: "1.0" });
 
-      // categories (tuỳ route FE của bạn)
-      // nếu category page của bạn là /category/:slug thì giữ như này
+      // ⚠️ Nếu route category của bạn khác, đổi ở đây
       for (const c of cats) {
         urls.push({
           loc: `${origin}/category/${encodeURIComponent(c.slug)}`,
@@ -88,7 +72,7 @@ module.exports = function sitemapRouter(db, opts = {}) {
         });
       }
 
-      // posts detail theo đúng route bạn đưa: /site/:slug
+      // ✅ Route post detail của bạn: /site/:slug
       for (const p of posts) {
         urls.push({
           loc: `${origin}/site/${encodeURIComponent(p.slug)}`,
@@ -98,30 +82,15 @@ module.exports = function sitemapRouter(db, opts = {}) {
         });
       }
 
-      // ====== XML ======
       const body =
         `<?xml version="1.0" encoding="UTF-8"?>` +
         `<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">` +
         urls
           .map((u) => {
-            const lastmod = u.lastmod
-              ? `<lastmod>${escXml(u.lastmod)}</lastmod>`
-              : "";
-            const changefreq = u.changefreq
-              ? `<changefreq>${escXml(u.changefreq)}</changefreq>`
-              : "";
-            const priority = u.priority
-              ? `<priority>${escXml(u.priority)}</priority>`
-              : "";
-
-            return (
-              `<url>` +
-              `<loc>${escXml(u.loc)}</loc>` +
-              lastmod +
-              changefreq +
-              priority +
-              `</url>`
-            );
+            const lastmod = u.lastmod ? `<lastmod>${escXml(u.lastmod)}</lastmod>` : "";
+            const changefreq = u.changefreq ? `<changefreq>${escXml(u.changefreq)}</changefreq>` : "";
+            const priority = u.priority ? `<priority>${escXml(u.priority)}</priority>` : "";
+            return `<url><loc>${escXml(u.loc)}</loc>${lastmod}${changefreq}${priority}</url>`;
           })
           .join("") +
         `</urlset>`;
@@ -129,7 +98,6 @@ module.exports = function sitemapRouter(db, opts = {}) {
       res.setHeader("Content-Type", "application/xml; charset=utf-8");
       res.setHeader("Cache-Control", `public, max-age=${cacheSeconds}`);
 
-      // gzip
       if (enableGzip && /\bgzip\b/.test(req.headers["accept-encoding"] || "")) {
         res.setHeader("Content-Encoding", "gzip");
         return res.end(zlib.gzipSync(body));

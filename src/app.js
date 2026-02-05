@@ -2,6 +2,7 @@ const express = require("express");
 const cors = require("cors");
 const cookieParser = require("cookie-parser");
 const path = require("path");
+const sequelize = require("./config/db"); 
 const authRoutes = require("./routes/authRoutes");
 const postRoutes = require("./routes/postRoutes");
 const categoryRoutes = require("./routes/categoryRoutes");
@@ -46,7 +47,7 @@ app.use("/api/media-types", mediaTypeRoutes);
 app.use("/api/templates", templateRoutes);
 
 app.use(
-  sitemapRouter({
+  sitemapRouter(sequelize,{
     siteUrl: "globalpromotionllc.com",
     enableGzip: true,
   }),
