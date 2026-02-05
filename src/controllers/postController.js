@@ -18,19 +18,30 @@ exports.getPublicPosts = async (req, res) => {
     let order = [["sequence_number", "ASC"]];
     if (sort) {
       const [field, directionRaw] = String(sort).split(":");
-      const direction = (directionRaw || "DESC").toUpperCase() === "ASC" ? "ASC" : "DESC";
+      const direction =
+        (directionRaw || "DESC").toUpperCase() === "ASC" ? "ASC" : "DESC";
+
       if (["view_count", "sequence_number", "created_at"].includes(field)) {
         order = [[field, direction]];
       }
     }
 
     // where
-    const where = { is_approved: true, is_deleted: 0, is_hidden: false };
+    const where = {
+      is_approved: true,
+      is_deleted: 0,
+      is_hidden: false,
+    };
+
     if (category) where.category_id = category;
 
     if (search && String(search).trim()) {
       const s = String(search).trim();
-      where[Op.or] = [{ title: { [Op.like]: `%${s}%` } }, { post_title: { [Op.like]: `%${s}%` } }, { slug: { [Op.like]: `%${s}%` } }];
+      where[Op.or] = [
+        { title: { [Op.like]: `%${s}%` } },
+        { post_title: { [Op.like]: `%${s}%` } },
+        { slug: { [Op.like]: `%${s}%` } },
+      ];
     }
 
     // pagination
@@ -38,14 +49,20 @@ exports.getPublicPosts = async (req, res) => {
     const limitNum = Math.min(Math.max(parseInt(limit, 10) || 8, 1), 50);
     const offset = (pageNum - 1) * limitNum;
 
-    // include + filter parent category
+    // include
     const include = [
-      { model: User, as: "creator", attributes: ["username"] },
+      {
+        model: User,
+        as: "creator",
+        attributes: ["username"],
+      },
       {
         model: Category,
         as: "category",
         attributes: ["id", "name", "parent_id"],
-        ...(parentCategory ? { where: { parent_id: parentCategory }, required: true } : {}),
+        ...(parentCategory
+          ? { where: { parent_id: parentCategory }, required: true }
+          : {}),
       },
     ];
 
@@ -54,6 +71,10 @@ exports.getPublicPosts = async (req, res) => {
       order,
       limit: limitNum,
       offset,
+      attributes: {
+        exclude: ["content"],
+      },
+
       include,
       distinct: true,
     });
@@ -71,6 +92,7 @@ exports.getPublicPosts = async (req, res) => {
     return res.status(500).json({ message: err.message });
   }
 };
+
 
 // Public/User: Get single post and increment view
 exports.getPostDetail = async (req, res) => {
@@ -171,9 +193,14 @@ exports.getAllPostsAdmin = async (req, res) => {
     if (parentCategory) {
       categoryWhere.parent_id = parentCategory;
     }
+
     if (search) {
-      where[Op.or] = [{ title: { [Op.like]: `%${search}%` } }, { post_title: { [Op.like]: `%${search}%` } }];
+      where[Op.or] = [
+        { title: { [Op.like]: `%${search}%` } },
+        { post_title: { [Op.like]: `%${search}%` } },
+      ];
     }
+
     if (startDate && endDate) {
       where.created_at = {
         [Op.between]: [new Date(startDate), new Date(endDate + "T23:59:59")],
@@ -186,14 +213,14 @@ exports.getAllPostsAdmin = async (req, res) => {
 
     let order = [["created_at", "DESC"]];
     if (sort) {
-      try {
-        const [field, direction] = sort.split(":");
-        order = [[field, direction]];
-      } catch (e) {}
+      const [field, directionRaw] = String(sort).split(":");
+      const direction =
+        (directionRaw || "DESC").toUpperCase() === "ASC" ? "ASC" : "DESC";
+      order = [[field, direction]];
     }
 
-    const page = parseInt(req.query.page) || 1;
-    const limit = parseInt(req.query.limit) || 10;
+    const page = parseInt(req.query.page, 10) || 1;
+    const limit = parseInt(req.query.limit, 10) || 10;
     const offset = (page - 1) * limit;
 
     const { count, rows: posts } = await Post.findAndCountAll({
@@ -201,6 +228,12 @@ exports.getAllPostsAdmin = async (req, res) => {
       order,
       limit,
       offset,
+
+      // 🔥 BỎ content ở đây
+      attributes: {
+        exclude: ["content"],
+      },
+
       include: [
         { model: User, as: "creator", attributes: ["username"] },
         { model: User, as: "updater", attributes: ["username"] },
@@ -212,6 +245,7 @@ exports.getAllPostsAdmin = async (req, res) => {
           required: Object.keys(categoryWhere).length > 0,
         },
       ],
+      distinct: true,
     });
 
     res.json({
@@ -224,6 +258,7 @@ exports.getAllPostsAdmin = async (req, res) => {
     res.status(500).json({ message: err.message });
   }
 };
+
 
 // Admin: Approve post
 exports.approvePost = async (req, res) => {
