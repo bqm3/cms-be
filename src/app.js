@@ -47,10 +47,10 @@ app.use("/api/media-types", mediaTypeRoutes);
 app.use("/api/templates", templateRoutes);
 
 app.use(
-  sitemapRouter(sequelize,{
-    siteUrl: "globalpromotionllc.com",
+  sitemapRouter({
+    siteUrl: "https://globalpromotionllc.com",
     enableGzip: true,
-  }),
+  })
 );
 
 app.get("/robots.txt", (req, res) => {
@@ -60,7 +60,7 @@ app.get("/robots.txt", (req, res) => {
 Allow: /
 
 Sitemap: ${origin}/sitemap.xml
-`
+`,
   );
 });
 

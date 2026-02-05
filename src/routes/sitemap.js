@@ -1,5 +1,9 @@
 const express = require("express");
 const zlib = require("zlib");
+const { Op } = require("sequelize");
+
+const Post = require("../models/Post");
+const Category = require("../models/Category");
 
 function escXml(s = "") {
   return String(s)
@@ -17,7 +21,7 @@ function toIsoDate(d) {
   return dt.toISOString();
 }
 
-module.exports = function sitemapRouter(sequelize, opts = {}) {
+module.exports = function sitemapRouter(opts = {}) {
   const router = express.Router();
 
   const {
@@ -33,36 +37,39 @@ module.exports = function sitemapRouter(sequelize, opts = {}) {
         siteUrl ||
         `${req.protocol}://${req.get("x-forwarded-host") || req.get("host")}`;
 
-      // ✅ Sequelize raw query trả về [rows, meta]
-      const [posts] = await sequelize.query(
-        `
-        SELECT slug, updated_at
-        FROM posts
-        WHERE is_deleted = 0
-          AND (is_hidden = 0 OR is_hidden IS NULL)
-          AND (is_approved = 1 OR is_approved IS NULL)
-          AND slug IS NOT NULL AND slug <> ''
-        ORDER BY updated_at DESC
-        LIMIT ${Number(maxUrls)}
-        `
-      );
+      const posts = await Post.findAll({
+        attributes: ["slug", "updated_at"],
+        where: {
+          is_deleted: 0,
+          [Op.and]: [
+            { slug: { [Op.ne]: null } },
+            { slug: { [Op.ne]: "" } },
+          ],
+        },
+        order: [["updated_at", "DESC"]],
+        limit: Number(maxUrls) || 50000,
+        raw: true,
+      });
 
-      const [cats] = await sequelize.query(
-        `
-        SELECT slug, updated_at
-        FROM categories
-        WHERE is_deleted = 0
-          AND slug IS NOT NULL AND slug <> ''
-        ORDER BY updated_at DESC
-        LIMIT ${Number(maxUrls)}
-        `
-      );
+      const cats = await Category.findAll({
+        attributes: ["slug", "updated_at"],
+        where: {
+          is_deleted: 0,
+          [Op.and]: [
+            { slug: { [Op.ne]: null } },
+            { slug: { [Op.ne]: "" } },
+          ],
+        },
+        order: [["updated_at", "DESC"]],
+        limit: Number(maxUrls) || 50000,
+        raw: true,
+      });
 
       const urls = [];
 
       urls.push({ loc: `${origin}/`, changefreq: "daily", priority: "1.0" });
 
-      // ⚠️ Nếu route category của bạn khác, đổi ở đây
+      // ⚠️ đổi nếu route category của bạn khác
       for (const c of cats) {
         urls.push({
           loc: `${origin}/category/${encodeURIComponent(c.slug)}`,
@@ -72,7 +79,7 @@ module.exports = function sitemapRouter(sequelize, opts = {}) {
         });
       }
 
-      // ✅ Route post detail của bạn: /site/:slug
+      // ✅ route post detail: /site/:slug
       for (const p of posts) {
         urls.push({
           loc: `${origin}/site/${encodeURIComponent(p.slug)}`,
@@ -105,6 +112,10 @@ module.exports = function sitemapRouter(sequelize, opts = {}) {
 
       return res.send(body);
     } catch (err) {
+      console.error("SITEMAP ERROR:", err?.message);
+      console.error("SQL:", err?.sql);
+      console.error("SQL MESSAGE:", err?.original?.sqlMessage);
+      console.error("CODE:", err?.original?.code);
       return next(err);
     }
   });
