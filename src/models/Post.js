@@ -18,6 +18,19 @@ const Post = sequelize.define(
       type: DataTypes.STRING,
       allowNull: false,
     },
+    meta_title: {
+      type: DataTypes.STRING,
+      allowNull: false,
+    },
+    meta_keyword: {
+      type: DataTypes.STRING,
+      allowNull: false,
+    },
+    meta_description: {
+      type: DataTypes.STRING,
+      allowNull: false,
+    },
+    meta_override: { type: DataTypes.BOOLEAN, allowNull: false, defaultValue: false },
     logo: {
       type: DataTypes.STRING,
       allowNull: true,
@@ -26,6 +39,7 @@ const Post = sequelize.define(
       type: DataTypes.STRING,
       allowNull: true,
     },
+   
     content: {
       type: DataTypes.TEXT("long"),
       allowNull: true,

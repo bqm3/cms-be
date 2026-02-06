@@ -9,6 +9,28 @@ function generateSlug(title) {
   return `${baseSlug}-${random}`;
 }
 
+function buildAutoMetaFromTitle(titleRaw) {
+  const t = String(titleRaw || "").trim();
+  if (!t) return { meta_title: null, meta_keyword: null, meta_description: null };
+
+  const meta_title = `${t} promotion latest`;
+
+  const meta_description =
+    `Use Globalpromotionllc.com to find the latest discount codes and best deals when shopping ` +
+    `online at ${t} through Globalpromotionllc.com. Save more on every order with our verified discount codes, ` +
+    `food coupons, and cashback offers.`;
+
+  // keyword: Title, Title promotion, Title promotion newest
+  const meta_keyword = `${t}, ${t} promotion, ${t} promotion newest`;
+
+  return { meta_title, meta_keyword, meta_description };
+}
+
+function parseBool(v) {
+  return v === true || v === "true" || v === "1" || v === 1;
+}
+
+
 // Public: Get all approved posts
 exports.getPublicPosts = async (req, res) => {
   try {
@@ -128,7 +150,21 @@ exports.getPostDetail = async (req, res) => {
 // User: Create post
 exports.createPost = async (req, res) => {
   try {
-    const { sequence_number, title, post_title, content, category_id, topic_name, view_count, description } = req.body;
+    const {
+      sequence_number,
+      title,
+      content,
+      category_id,
+      topic_name,
+      view_count,
+      is_hidden,
+
+      // ✅ meta fields
+      meta_title,
+      meta_keyword,
+      meta_description,
+      meta_override,
+    } = req.body;
 
     if (!req.user?.id) {
       return res.status(401).json({ message: "Unauthorized" });
@@ -139,7 +175,7 @@ exports.createPost = async (req, res) => {
       return res.status(400).json({ message: "Tiêu đề là bắt buộc" });
     }
 
-    // ✅ category_id: cho phép null
+    // category_id nullable
     let catId = null;
     if (category_id !== undefined && category_id !== null && String(category_id).trim() !== "") {
       catId = Number(category_id);
@@ -150,19 +186,38 @@ exports.createPost = async (req, res) => {
 
     const logo = req.file ? `/uploads/${req.file.filename}` : null;
     const slug = await generateSlug(cleanTitle);
-    console.log("slug", slug);
+
+    const override = parseBool(meta_override);
+
+    const autoMeta = buildAutoMetaFromTitle(cleanTitle);
+    const finalMeta = override
+      ? {
+          meta_title: (meta_title ?? "").trim() || null,
+          meta_keyword: (meta_keyword ?? "").trim() || null,
+          meta_description: (meta_description ?? "").trim() || null,
+          meta_override: true,
+        }
+      : {
+          ...autoMeta,
+          meta_override: false,
+        };
 
     const post = await Post.create({
       sequence_number: Number(sequence_number) || 0,
       title: cleanTitle,
-      post_title: (post_title ?? "").trim() || null,
       content: content ?? "",
-      category_id: catId, // ✅ null OK
+      category_id: catId,
       topic_name: (topic_name ?? "").trim() || null,
       view_count: Number(view_count) || 0,
       logo,
-      slug: slug,
-      description: description || null,
+      slug,
+
+      // ✅ hidden
+      is_hidden: parseBool(is_hidden),
+
+      // ✅ meta
+      ...finalMeta,
+
       created_by: req.user.id,
       is_approved: req.user.role === "admin",
     });
@@ -173,6 +228,7 @@ exports.createPost = async (req, res) => {
     return res.status(500).json({ message: err.message || "Server error" });
   }
 };
+
 
 // Admin/User: Get posts for dashboard (Admin sees all, User sees own)
 exports.getAllPostsAdmin = async (req, res) => {
@@ -301,13 +357,20 @@ exports.copyPost = async (req, res) => {
       logo: post.logo,
       slug: newSlug,
       description: post.description,
+
+      // ✅ copy SEO meta
+      meta_override: !!post.meta_override,
+      meta_title: post.meta_title || "",
+      meta_keyword: post.meta_keyword || "",
+      meta_description: post.meta_description || "",
+
       created_by: req.user.id,
       is_approved: req.user.role === "admin",
     });
 
-    res.status(201).json(duplicatedPost);
+    return res.status(201).json(duplicatedPost);
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    return res.status(500).json({ message: err.message });
   }
 };
 
@@ -317,17 +380,27 @@ exports.updatePost = async (req, res) => {
     const post = await Post.findOne({ where: { id: req.params.id, is_deleted: 0 } });
     if (!post) return res.status(404).json({ message: "Post not found" });
 
-    // Check permission
     if (req.user.role !== "admin" && post.created_by !== req.user.id) {
       return res.status(403).json({ message: "Unauthorized" });
     }
 
-    const { sequence_number, title, post_title, content, category_id, topic_name, is_approved, slug, view_count, is_hidden, description } = req.body;
+    const {
+      sequence_number,
+      title,
+      content,
+      category_id,
+      topic_name,
+      is_approved,
+      view_count,
+      is_hidden,
 
-    if (is_hidden !== undefined) {
-      const v = is_hidden;
-      post.is_hidden = v === true || v === "true" || v === "1" || v === 1;
-    }
+      // ✅ meta
+      meta_title,
+      meta_keyword,
+      meta_description,
+      meta_override,
+    } = req.body;
+
     if (req.file) {
       post.logo = `/uploads/${req.file.filename}`;
     }
@@ -335,29 +408,42 @@ exports.updatePost = async (req, res) => {
     if (sequence_number !== undefined) post.sequence_number = sequence_number;
     if (view_count !== undefined) post.view_count = view_count;
 
-    // Auto-update slug if title changes and no slug provided, or if slug provided
-    if (title && title !== post.title && !slug) {
-      post.slug = await generateSlug(title, post.id);
-    } else if (slug) {
-      // If user provides a custom slug, we should still ensure it's unique
-      post.slug = await generateSlug(slug, post.id);
-    } else if (title && !post.slug) {
-      post.slug = await generateSlug(title, post.id);
+    if (is_hidden !== undefined) {
+      post.is_hidden = parseBool(is_hidden);
     }
 
-    if (title) post.title = title;
-    if (post_title) post.post_title = post_title;
-    if (content) post.content = content;
-    if (category_id) post.category_id = category_id;
-    if (topic_name) post.topic_name = topic_name;
-    if (description !== undefined) post.description = description;
+    // title/content/category/topic
+    if (title !== undefined) post.title = String(title || "").trim();
+    if (content !== undefined) post.content = content;
+    if (category_id !== undefined) post.category_id = category_id || null;
+    if (topic_name !== undefined) post.topic_name = (topic_name ?? "").trim() || null;
+
+    // ✅ meta logic
+    if (meta_override !== undefined) {
+      const override = parseBool(meta_override);
+
+      if (override) {
+        post.meta_title = (meta_title ?? "").trim() || null;
+        post.meta_keyword = (meta_keyword ?? "").trim() || null;
+        post.meta_description = (meta_description ?? "").trim() || null;
+        post.meta_override = true;
+      } else {
+        // auto-generate from latest title
+        const baseTitle = String(post.title || "").trim();
+        const autoMeta = buildAutoMetaFromTitle(baseTitle);
+        post.meta_title = autoMeta.meta_title;
+        post.meta_keyword = autoMeta.meta_keyword;
+        post.meta_description = autoMeta.meta_description;
+        post.meta_override = false;
+      }
+    }
 
     post.updated_by = req.user.id;
 
     if (req.user.role === "admin" && is_approved !== undefined) {
       post.is_approved = is_approved;
     } else if (req.user.role !== "admin") {
-      post.is_approved = false; // Re-approval needed if user edits
+      post.is_approved = false;
     }
 
     await post.save();
@@ -366,6 +452,7 @@ exports.updatePost = async (req, res) => {
     res.status(500).json({ message: err.message });
   }
 };
+
 
 // Admin: Delete post
 exports.deletePost = async (req, res) => {
