@@ -1,4 +1,4 @@
-const { Post, User, Category } = require("../models");
+const { Post, User, Category, ParentCategory } = require("../models");
 const { Op } = require("sequelize");
 const crypto = require("crypto");
 const slugify = require("../utils/slugify");
@@ -30,7 +30,6 @@ function parseBool(v) {
   return v === true || v === "true" || v === "1" || v === 1;
 }
 
-
 // Public: Get all approved posts
 exports.getPublicPosts = async (req, res) => {
   try {
@@ -40,8 +39,7 @@ exports.getPublicPosts = async (req, res) => {
     let order = [["sequence_number", "ASC"]];
     if (sort) {
       const [field, directionRaw] = String(sort).split(":");
-      const direction =
-        (directionRaw || "DESC").toUpperCase() === "ASC" ? "ASC" : "DESC";
+      const direction = (directionRaw || "DESC").toUpperCase() === "ASC" ? "ASC" : "DESC";
 
       if (["view_count", "sequence_number", "created_at"].includes(field)) {
         order = [[field, direction]];
@@ -55,15 +53,19 @@ exports.getPublicPosts = async (req, res) => {
       is_hidden: false,
     };
 
-    if (category) where.category_id = category;
+    if (category) {
+      if (/^\d+$/.test(category)) {
+        where.category_id = category;
+      } else {
+        const cat = await Category.findOne({ where: { slug: category, is_deleted: 0 } });
+        if (cat) where.category_id = cat.id;
+        else where.category_id = -1; // Not found
+      }
+    }
 
     if (search && String(search).trim()) {
       const s = String(search).trim();
-      where[Op.or] = [
-        { title: { [Op.like]: `%${s}%` } },
-        { post_title: { [Op.like]: `%${s}%` } },
-        { slug: { [Op.like]: `%${s}%` } },
-      ];
+      where[Op.or] = [{ title: { [Op.like]: `%${s}%` } }, { post_title: { [Op.like]: `%${s}%` } }, { slug: { [Op.like]: `%${s}%` } }];
     }
 
     // pagination
@@ -72,6 +74,12 @@ exports.getPublicPosts = async (req, res) => {
     const offset = (pageNum - 1) * limitNum;
 
     // include
+    let parentCategoryId = parentCategory;
+    if (parentCategory && !/^\d+$/.test(parentCategory)) {
+      const pc = await ParentCategory.findOne({ where: { slug: parentCategory, is_deleted: 0 } });
+      parentCategoryId = pc ? pc.id : -1;
+    }
+
     const include = [
       {
         model: User,
@@ -81,10 +89,8 @@ exports.getPublicPosts = async (req, res) => {
       {
         model: Category,
         as: "category",
-        attributes: ["id", "name", "parent_id"],
-        ...(parentCategory
-          ? { where: { parent_id: parentCategory }, required: true }
-          : {}),
+        attributes: ["id", "name", "parent_id", "slug"],
+        ...(parentCategoryId ? { where: { parent_id: parentCategoryId }, required: true } : {}),
       },
     ];
 
@@ -114,7 +120,6 @@ exports.getPublicPosts = async (req, res) => {
     return res.status(500).json({ message: err.message });
   }
 };
-
 
 // Public/User: Get single post and increment view
 exports.getPostDetail = async (req, res) => {
@@ -229,7 +234,6 @@ exports.createPost = async (req, res) => {
   }
 };
 
-
 // Admin/User: Get posts for dashboard (Admin sees all, User sees own)
 exports.getAllPostsAdmin = async (req, res) => {
   try {
@@ -251,10 +255,7 @@ exports.getAllPostsAdmin = async (req, res) => {
     }
 
     if (search) {
-      where[Op.or] = [
-        { title: { [Op.like]: `%${search}%` } },
-        { post_title: { [Op.like]: `%${search}%` } },
-      ];
+      where[Op.or] = [{ title: { [Op.like]: `%${search}%` } }, { post_title: { [Op.like]: `%${search}%` } }];
     }
 
     if (startDate && endDate) {
@@ -270,8 +271,7 @@ exports.getAllPostsAdmin = async (req, res) => {
     let order = [["created_at", "DESC"]];
     if (sort) {
       const [field, directionRaw] = String(sort).split(":");
-      const direction =
-        (directionRaw || "DESC").toUpperCase() === "ASC" ? "ASC" : "DESC";
+      const direction = (directionRaw || "DESC").toUpperCase() === "ASC" ? "ASC" : "DESC";
       order = [[field, direction]];
     }
 
@@ -314,7 +314,6 @@ exports.getAllPostsAdmin = async (req, res) => {
     res.status(500).json({ message: err.message });
   }
 };
-
 
 // Admin: Approve post
 exports.approvePost = async (req, res) => {
@@ -452,7 +451,6 @@ exports.updatePost = async (req, res) => {
     res.status(500).json({ message: err.message });
   }
 };
-
 
 // Admin: Delete post
 exports.deletePost = async (req, res) => {

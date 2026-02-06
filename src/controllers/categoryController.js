@@ -52,6 +52,9 @@ exports.getAllCategories = async (req, res) => {
     });
     res.json(categories);
   } catch (err) {
+    if (err.name === "SequelizeValidationError" || err.name === "SequelizeUniqueConstraintError") {
+      return res.status(400).json({ message: err.errors.map((e) => e.message).join(", ") });
+    }
     res.status(500).json({ message: err.message });
   }
 };
@@ -62,6 +65,9 @@ exports.createCategory = async (req, res) => {
     const category = await Category.create({ name, slug, parent_id, sequence_number });
     res.status(201).json(category);
   } catch (err) {
+    if (err.name === "SequelizeValidationError" || err.name === "SequelizeUniqueConstraintError") {
+      return res.status(400).json({ message: err.errors.map((e) => e.message).join(", ") });
+    }
     res.status(500).json({ message: err.message });
   }
 };
@@ -81,6 +87,9 @@ exports.updateCategory = async (req, res) => {
 
     res.json(category);
   } catch (err) {
+    if (err.name === "SequelizeValidationError" || err.name === "SequelizeUniqueConstraintError") {
+      return res.status(400).json({ message: err.errors.map((e) => e.message).join(", ") });
+    }
     res.status(500).json({ message: err.message });
   }
 };
@@ -94,6 +103,9 @@ exports.deleteCategory = async (req, res) => {
     await category.save();
     res.json({ message: "Category deleted" });
   } catch (err) {
+    if (err.name === "SequelizeValidationError" || err.name === "SequelizeUniqueConstraintError") {
+      return res.status(400).json({ message: err.errors.map((e) => e.message).join(", ") });
+    }
     res.status(500).json({ message: err.message });
   }
 };

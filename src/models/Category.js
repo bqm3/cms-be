@@ -1,5 +1,7 @@
 const { DataTypes } = require("sequelize");
 const sequelize = require("../config/db");
+const { Op } = require("sequelize");
+const slugify = require("../utils/slugify");
 
 const Category = sequelize.define(
   "Category",
@@ -12,11 +14,11 @@ const Category = sequelize.define(
     name: {
       type: DataTypes.STRING,
       allowNull: false,
-      unique: "uq_category_name",
     },
     slug: {
       type: DataTypes.STRING,
-      allowNull: true,
+      allowNull: false,
+      unique: true,
     },
     parent_id: {
       type: DataTypes.INTEGER,
@@ -35,6 +37,54 @@ const Category = sequelize.define(
     timestamps: true,
     createdAt: "created_at",
     updatedAt: "updated_at",
+    hooks: {
+      beforeValidate: async (category) => {
+        // Generate slug if name is provided but slug is not
+        if (category.name && (!category.slug || category.slug.trim() === "")) {
+          category.slug = slugify(category.name);
+        }
+
+        // Ensure slug is unique
+        if (category.slug) {
+          let baseSlug = category.slug;
+          let slug = baseSlug;
+          let count = 1;
+
+          while (true) {
+            const existing = await Category.findOne({
+              where: {
+                slug: slug,
+                id: { [Op.ne]: category.id || 0 },
+              },
+            });
+            if (!existing) break;
+            slug = `${baseSlug}-${count}`;
+            count++;
+          }
+          category.slug = slug;
+        }
+      },
+      beforeUpdate: async (category) => {
+        // If slug is explicitly changed or name is changed while slug is empty
+        if (category.changed("slug") || (category.changed("name") && !category.slug)) {
+          let baseSlug = category.slug || slugify(category.name);
+          let slug = baseSlug;
+          let count = 1;
+          while (true) {
+            const existing = await Category.findOne({
+              where: {
+                slug: slug,
+                id: { [Op.ne]: category.id },
+              },
+            });
+            if (!existing) break;
+            slug = `${baseSlug}-${count}`;
+            count++;
+          }
+          category.slug = slug;
+        }
+      },
+    },
   },
 );
 
