@@ -5,7 +5,8 @@
   "scripts": {
     "start": "node src/server.js",
     "dev": "nodemon src/server.js",
-    "update-slugs": "node scripts/updateCategorySlugs.js"
+    "update-slugs": "node scripts/updateCategorySlugs.js",
+    "fix-constraints": "node scripts/fixConstraints.js"
   },
   "keywords": [],
   "author": "",

@@ -33,7 +33,11 @@ function parseBool(v) {
 // Public: Get all approved posts
 exports.getPublicPosts = async (req, res) => {
   try {
-    const { sort, category, parentCategory, search, page = 1, limit = 10 } = req.query;
+    const { sort, search, page = 1, limit = 10 } = req.query;
+
+    // Ưu tiên params từ URL (catalog/:parentCategory/:category) hơn là query string
+    const category = req.params.category || req.query.category;
+    const parentCategory = req.params.parentCategory || req.query.parentCategory;
 
     // sort
     let order = [["sequence_number", "ASC"]];
