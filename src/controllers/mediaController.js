@@ -1,5 +1,5 @@
-const { Media, Category, MediaType } = require('../models');
-const { Op } = require('sequelize');
+const { Media, Category, MediaType } = require("../models");
+const { Op } = require("sequelize");
 
 exports.getAllMedia = async (req, res) => {
   try {
@@ -13,37 +13,37 @@ exports.getAllMedia = async (req, res) => {
       where.name = { [Op.like]: `%${search}%` };
     }
     if (category_id) {
-        where.category_id = category_id;
+      where.category_id = category_id;
     }
     if (media_type_id) {
-        where.media_type_id = media_type_id;
+      where.media_type_id = media_type_id;
     }
     if (startDate && endDate) {
       where.created_at = {
-        [Op.between]: [new Date(startDate), new Date(endDate + 'T23:59:59')]
+        [Op.between]: [new Date(startDate), new Date(endDate + "T23:59:59")],
       };
     } else if (startDate) {
       where.created_at = { [Op.gte]: new Date(startDate) };
     } else if (endDate) {
-      where.created_at = { [Op.lte]: new Date(endDate + 'T23:59:59') };
+      where.created_at = { [Op.lte]: new Date(endDate + "T23:59:59") };
     }
 
     const { count, rows: media } = await Media.findAndCountAll({
       where,
       include: [
-        { model: Category, as: 'category', attributes: ['id', 'name'] },
-        { model: MediaType, as: 'mediaType', attributes: ['id', 'name'] }
+        { model: Category, as: "category", attributes: ["id", "name"] },
+        { model: MediaType, as: "mediaType", attributes: ["id", "name"] },
       ],
-      order: [['created_at', 'DESC']],
+      order: [["created_at", "DESC"]],
       limit,
-      offset
+      offset,
     });
 
     res.json({
       media,
       total: count,
       totalPages: Math.ceil(count / limit),
-      currentPage: page
+      currentPage: page,
     });
   } catch (err) {
     res.status(500).json({ message: err.message });
@@ -53,27 +53,37 @@ exports.getAllMedia = async (req, res) => {
 exports.createMedia = async (req, res) => {
   try {
     const { name, url: linkUrl, media_type_id, category_id } = req.body;
-    
-    let url = linkUrl || '';
-    let sourceType = 'link';
 
-    if (req.file) {
-      url = `/uploads/images/${req.file.filename}`;
-      sourceType = 'upload';
+    // Handle file uploads (multiple or single)
+    if (req.files && req.files.length > 0) {
+      const mediaEntries = req.files.map((file) => ({
+        name: req.files.length === 1 && name ? name : file.originalname,
+        url: `/uploads/images/${file.filename}`,
+        source_type: "upload",
+        media_type_id: media_type_id || null,
+        category_id: category_id || null,
+      }));
+
+      const createdMedia = await Media.bulkCreate(mediaEntries);
+      return res.status(201).json(req.files.length === 1 ? createdMedia[0] : createdMedia);
     }
+
+    // Handle link-based media
+    let url = linkUrl || "";
+    let sourceType = "link";
 
     if (!url) {
-        return res.status(400).json({ message: 'URL or File is required' });
+      return res.status(400).json({ message: "URL or Files are required" });
     }
 
-    const media = await Media.create({ 
-      name: name || (req.file ? req.file.originalname : 'Unnamed'), 
-      url, 
+    const media = await Media.create({
+      name: name || "Unnamed",
+      url,
       source_type: sourceType,
       media_type_id: media_type_id || null,
-      category_id: category_id || null
+      category_id: category_id || null,
     });
-    
+
     res.status(201).json(media);
   } catch (err) {
     res.status(500).json({ message: err.message });
@@ -83,11 +93,11 @@ exports.createMedia = async (req, res) => {
 exports.deleteMedia = async (req, res) => {
   try {
     const media = await Media.findOne({ where: { id: req.params.id, is_deleted: 0 } });
-    if (!media) return res.status(404).json({ message: 'Media not found' });
-    
+    if (!media) return res.status(404).json({ message: "Media not found" });
+
     media.is_deleted = 1;
     await media.save();
-    res.json({ message: 'Media deleted' });
+    res.json({ message: "Media deleted" });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
