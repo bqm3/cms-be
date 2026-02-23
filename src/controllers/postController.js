@@ -144,10 +144,9 @@ exports.getPostDetail = async (req, res) => {
 
     if (!post) return res.status(404).json({ message: "Post not found" });
 
-    // Increment view count ONLY if in preview mode (as requested)
-    if (req.query.preview === "true") {
-      post.view_count += 1;
-      await post.save();
+    // Increment view count (only if NOT in preview mode and NOT in editor)
+    if (req.query.preview !== "true" && req.query.is_editor !== "true") {
+      await post.increment("view_count", { by: 1 });
     }
 
     res.json(post);
