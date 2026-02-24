@@ -13,6 +13,7 @@ const mediaRoutes = require("./routes/mediaRoutes");
 const mediaTypeRoutes = require("./routes/mediaTypeRoutes");
 const parentCategoryRoutes = require("./routes/parentCategoryRoutes");
 const templateRoutes = require("./routes/templateRoutes");
+const sheetRoutes = require("./routes/sheetRoutes");
 const sitemapRouter = require("./routes/sitemap");
 
 const app = express();
@@ -28,6 +29,8 @@ const allowedOrigins = [
   "http://172.21.164.1:5173",
   "http://192.168.1.19:5173",
   "https://globalpromotionllc.com",
+  "https://0858-101-99-6-230.ngrok-free.app/",
+  "https://f281-2001-ee0-49c4-a950-fdfb-7e67-3a8f-5e7.ngrok-free.app"
 ];
 
 const corsOptions = {
@@ -54,7 +57,8 @@ app.use(cookieParser());
 
 // ✅ CORS + preflight
 app.use(cors(corsOptions));
-app.options("*", cors(corsOptions));
+app.options(/.*/, cors(corsOptions));
+
 
 // ✅ Tăng limit body (tránh lỗi payload lớn ở Express)
 // Lưu ý: 413 vẫn có thể đến từ Nginx => cần client_max_body_size ở Nginx nữa.
@@ -73,6 +77,7 @@ app.use("/api/users", userRoutes);
 app.use("/api/media", mediaRoutes);
 app.use("/api/media-types", mediaTypeRoutes);
 app.use("/api/templates", templateRoutes);
+app.use("/api/sheets", sheetRoutes);
 
 // ✅ Sitemap
 app.use(

@@ -6,6 +6,10 @@ const ParentCategory = require('./ParentCategory');
 const Media = require('./Media');
 const MediaType = require('./MediaType');
 const Template = require('./Template');
+const Sheet = require("./Sheet");
+const SheetColumn = require("./SheetColumn");
+const SheetRow = require("./SheetRow");
+const SheetCell = require("./SheetCell");
 
 // User - Post associations
 Post.belongsTo(User, { as: 'creator', foreignKey: 'created_by' });
@@ -33,6 +37,24 @@ Template.belongsTo(User, { as: 'updater', foreignKey: 'updated_by' });
 Template.belongsTo(Category, { foreignKey: 'category_id', as: 'category' });
 Category.hasMany(Template, { foreignKey: 'category_id' });
 
+// Sheet associations
+Sheet.belongsTo(User, { as: "creator", foreignKey: "created_by" });
+Sheet.belongsTo(User, { as: "updater", foreignKey: "updated_by" });
+
+Sheet.hasMany(SheetColumn, { foreignKey: "sheet_id", as: "columns" });
+SheetColumn.belongsTo(Sheet, { foreignKey: "sheet_id", as: "sheet" });
+
+Sheet.hasMany(SheetRow, { foreignKey: "sheet_id", as: "rows" });
+SheetRow.belongsTo(Sheet, { foreignKey: "sheet_id", as: "sheet" });
+
+// Row - Cell - Column
+SheetRow.hasMany(SheetCell, { foreignKey: "sheet_row_id", as: "cells" });
+SheetCell.belongsTo(SheetRow, { foreignKey: "sheet_row_id", as: "row" });
+
+SheetColumn.hasMany(SheetCell, { foreignKey: "sheet_column_id", as: "cells" });
+SheetCell.belongsTo(SheetColumn, { foreignKey: "sheet_column_id", as: "column" });
+
+
 module.exports = {
   sequelize,
   User,
@@ -41,5 +63,9 @@ module.exports = {
   ParentCategory,
   Media,
   MediaType,
-  Template
+  Template,
+  Sheet,
+  SheetColumn,
+  SheetRow,
+  SheetCell,
 };
