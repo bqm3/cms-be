@@ -591,21 +591,31 @@ exports.listRows = async (req, res) => {
         const av = a.values?.[sortColumnId];
         const bv = b.values?.[sortColumnId];
 
-        const aNum = av !== null && av !== undefined && Number.isFinite(Number(av)) ? Number(av) : null;
-        const bNum = bv !== null && bv !== undefined && Number.isFinite(Number(bv)) ? Number(bv) : null;
+        const isEmpty = (v) => v === null || v === undefined || v === "";
+        const aEmpty = isEmpty(av);
+        const bEmpty = isEmpty(bv);
+
+        // Null/rỗng: tăng dần → lên đầu, giảm dần → xuống cuối
+        if (aEmpty && bEmpty) return 0;
+        if (aEmpty) return sortDir === "asc" ? -1 : 1;
+        if (bEmpty) return sortDir === "asc" ? 1 : -1;
+
+        const aNum = Number.isFinite(Number(av)) ? Number(av) : null;
+        const bNum = Number.isFinite(Number(bv)) ? Number(bv) : null;
 
         let cmp = 0;
         if (aNum !== null && bNum !== null) {
+          // Cả 2 là số
           cmp = aNum - bNum;
         } else if (aNum !== null && bNum === null) {
-          cmp = -1; // có số < null (null xuống cuối)
+          // a là số, b là string → số lên trước
+          cmp = -1;
         } else if (aNum === null && bNum !== null) {
+          // a là string, b là số → số lên trước
           cmp = 1;
         } else {
-          // cả 2 đều là string hoặc null
-          const as = av ?? "";
-          const bs = bv ?? "";
-          cmp = String(as).localeCompare(String(bs), "vi");
+          // Cả 2 là string
+          cmp = String(av).localeCompare(String(bv), "vi");
         }
 
         return sortDir === "asc" ? cmp : -cmp;
