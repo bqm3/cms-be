@@ -515,14 +515,14 @@ exports.listRows = async (req, res) => {
     if (!sheetId) return res.status(400).json({ message: "Invalid sheetId" });
 
     // query params
-    const q = (req.query.q || "").trim();              // search text
-    const sortBy = (req.query.sortBy || "id").trim();  // id | created_at | updated_at | note | col:<columnId>
+    const q = (req.query.q || "").trim();
+    const sortBy = (req.query.sortBy || "updated_at").trim();
     const sortDir = (req.query.sortDir || "desc").toLowerCase() === "asc" ? "asc" : "desc";
     const page = Math.max(1, Number(req.query.page || 1));
     const limit = Math.min(100, Math.max(5, Number(req.query.limit || 10)));
     const offset = (page - 1) * limit;
 
-    // load columns first (to build values map)
+    // load columns
     const columns = await SheetColumn.findAll({
       where: { sheet_id: sheetId },
       order: [["order_index", "ASC"]],
@@ -531,63 +531,34 @@ exports.listRows = async (req, res) => {
     // base where row
     const whereRow = { sheet_id: sheetId };
 
-    // search: tìm theo note hoặc theo cell.value chứa q
-    // => join SheetCell để search
+    // include cells
     const includeCells = {
       model: SheetCell,
       as: "cells",
       required: false,
-      where: q
+      ...(q
         ? {
-            [Op.or]: [
-              { value: { [Op.like]: `%${q}%` } },
-            ],
+            where: {
+              value: { [Op.like]: `%${q}%` },
+            },
           }
-        : undefined,
+        : {}),
     };
 
-    // search note cũng được
+    // search note
     if (q) {
       whereRow[Op.or] = [
         { note: { [Op.like]: `%${q}%` } },
-        // hoặc match bởi join cells (đã set includeCells.where)
       ];
     }
 
-    // sort
-    // - sortBy = "note" | "created_at" | ...
-    // - sortBy = "col:12" => sort theo numeric_value/value của columnId=12
-    let order = [["updated_at", sortDir]];
-    if (["id", "created_at", "updated_at", "note", "order_index"].includes(sortBy)) {
-      order = [[sortBy, sortDir]];
-    }
-
-    // nếu sort theo column: col:<id>
-    const colSortMatch = sortBy.match(/^col:(\d+)$/);
-    let sortColumnId = null;
-    if (colSortMatch) sortColumnId = Number(colSortMatch[1]);
-
-    // query rows (pagination)
-    const { rows, count } = await SheetRow.findAndCountAll({
-      where: whereRow,
-      include: [
-        includeCells, // cells (filter by q if any)
-      ],
-      order,
-      limit,
-      offset,
-      distinct: true, // để count đúng khi join
-    });
-
-    // Nếu sort theo column, ta sort thủ công sau khi build values (đơn giản, ok cho <= vài nghìn dòng)
-    const mappedRows = rows.map((r) => {
+    // helper map row
+    const mapRow = (r) => {
       const values = {};
       for (const c of columns) values[c.id] = null;
-
       for (const cell of r.cells || []) {
         values[cell.sheet_column_id] = cell.numeric_value ?? cell.value ?? null;
       }
-
       return {
         id: r.id,
         note: r.note,
@@ -596,25 +567,70 @@ exports.listRows = async (req, res) => {
         updated_at: r.updated_at,
         values,
       };
-    });
+    };
+
+    // sort theo column cell: col:<id>
+    const colSortMatch = sortBy.match(/^col:(\d+)$/);
+    const sortColumnId = colSortMatch ? Number(colSortMatch[1]) : null;
+
+    let mappedRows;
+    let total;
 
     if (sortColumnId) {
-      mappedRows.sort((a, b) => {
+      // Lấy TẤT CẢ rows, sort thủ công, rồi mới phân trang
+      const allRows = await SheetRow.findAll({
+        where: whereRow,
+        include: [includeCells],
+        distinct: true,
+      });
+
+      const allMapped = allRows.map(mapRow);
+
+      // Sort toàn bộ theo giá trị cell của column đó
+      allMapped.sort((a, b) => {
         const av = a.values?.[sortColumnId];
         const bv = b.values?.[sortColumnId];
 
-        // numeric first if possible
-        const an = av === null ? null : Number(av);
-        const bn = bv === null ? null : Number(bv);
-        const aNum = Number.isFinite(an) ? an : null;
-        const bNum = Number.isFinite(bn) ? bn : null;
+        const aNum = av !== null && av !== undefined && Number.isFinite(Number(av)) ? Number(av) : null;
+        const bNum = bv !== null && bv !== undefined && Number.isFinite(Number(bv)) ? Number(bv) : null;
 
         let cmp = 0;
-        if (aNum !== null && bNum !== null) cmp = aNum - bNum;
-        else cmp = String(av ?? "").localeCompare(String(bv ?? ""), "vi");
+        if (aNum !== null && bNum !== null) {
+          cmp = aNum - bNum;
+        } else if (aNum !== null && bNum === null) {
+          cmp = -1; // có số < null (null xuống cuối)
+        } else if (aNum === null && bNum !== null) {
+          cmp = 1;
+        } else {
+          // cả 2 đều là string hoặc null
+          const as = av ?? "";
+          const bs = bv ?? "";
+          cmp = String(as).localeCompare(String(bs), "vi");
+        }
 
         return sortDir === "asc" ? cmp : -cmp;
       });
+
+      total = allMapped.length;
+      mappedRows = allMapped.slice(offset, offset + limit);
+
+    } else {
+      // Sort bằng SQL (các cột mặc định: id, created_at, updated_at, note, order_index)
+      const validSqlSorts = ["id", "created_at", "updated_at", "note", "order_index"];
+      const sqlSortBy = validSqlSorts.includes(sortBy) ? sortBy : "updated_at";
+      const order = [[sqlSortBy, sortDir]];
+
+      const { rows, count } = await SheetRow.findAndCountAll({
+        where: whereRow,
+        include: [includeCells],
+        order,
+        limit,
+        offset,
+        distinct: true,
+      });
+
+      total = count;
+      mappedRows = rows.map(mapRow);
     }
 
     return res.json({
@@ -630,8 +646,8 @@ exports.listRows = async (req, res) => {
         pagination: {
           page,
           limit,
-          total: count,
-          totalPages: Math.ceil(count / limit),
+          total,
+          totalPages: Math.ceil(total / limit),
         },
       },
     });
