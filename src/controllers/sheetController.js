@@ -1,11 +1,5 @@
 const { Op } = require("sequelize");
-const {
-  sequelize,
-  Sheet,
-  SheetColumn,
-  SheetRow,
-  SheetCell,
-} = require("../models");
+const { sequelize, Sheet, SheetColumn, SheetRow, SheetCell } = require("../models");
 
 // helper: parse number safe
 function toNumberOrNull(v) {
@@ -16,9 +10,7 @@ function toNumberOrNull(v) {
 
 // helper: build excel-like response
 function buildGridResponse(sheet) {
-  const columns = (sheet.columns || [])
-    .slice()
-    .sort((a, b) => (a.order_index ?? 0) - (b.order_index ?? 0));
+  const columns = (sheet.columns || []).slice().sort((a, b) => (a.order_index ?? 0) - (b.order_index ?? 0));
 
   const rows = (sheet.rows || [])
     .slice()
@@ -125,7 +117,7 @@ exports.createSheet = async (req, res) => {
         created_by: userId,
         updated_by: userId,
       },
-      { transaction: t }
+      { transaction: t },
     );
 
     // tạo kèm columns (optional)
@@ -284,7 +276,7 @@ exports.updateColumn = async (req, res) => {
         required: required !== undefined ? !!required : col.required,
         updated_by: userId || col.updated_by,
       },
-      { transaction: t }
+      { transaction: t },
     );
 
     await t.commit();
@@ -359,7 +351,7 @@ exports.createRow = async (req, res) => {
         created_by: userId,
         updated_by: userId,
       },
-      { transaction: t }
+      { transaction: t },
     );
 
     // tạo cells kèm theo (optional)
@@ -508,7 +500,6 @@ exports.bulkUpsertCells = async (req, res) => {
   }
 };
 
-
 exports.listRows = async (req, res) => {
   try {
     const sheetId = Number(req.params.sheetId);
@@ -531,25 +522,33 @@ exports.listRows = async (req, res) => {
     // base where row
     const whereRow = { sheet_id: sheetId };
 
-    // include cells
+    // include ALL cells for the matching rows
     const includeCells = {
       model: SheetCell,
       as: "cells",
       required: false,
-      ...(q
-        ? {
-            where: {
-              value: { [Op.like]: `%${q}%` },
-            },
-          }
-        : {}),
     };
 
-    // search note
     if (q) {
-      whereRow[Op.or] = [
-        { note: { [Op.like]: `%${q}%` } },
-      ];
+      // Find row IDs where any cell matches q
+      const matchingCells = await SheetCell.findAll({
+        attributes: ["sheet_row_id"],
+        include: [
+          {
+            model: SheetRow,
+            as: "row",
+            attributes: [],
+            where: { sheet_id: sheetId },
+          },
+        ],
+        where: {
+          value: { [Op.like]: `%${q}%` },
+        },
+        raw: true,
+      });
+      const rowIds = [...new Set(matchingCells.map((c) => c.sheet_row_id))];
+
+      whereRow[Op.or] = [{ note: { [Op.like]: `%${q}%` } }, { id: { [Op.in]: rowIds } }];
     }
 
     // helper map row
@@ -623,7 +622,6 @@ exports.listRows = async (req, res) => {
 
       total = allMapped.length;
       mappedRows = allMapped.slice(offset, offset + limit);
-
     } else {
       // Sort bằng SQL (các cột mặc định: id, created_at, updated_at, note, order_index)
       const validSqlSorts = ["id", "created_at", "updated_at", "note", "order_index"];
