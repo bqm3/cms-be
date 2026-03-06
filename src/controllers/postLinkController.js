@@ -76,16 +76,27 @@ exports.bulkUpdateLinks = async (req, res) => {
     const { postId } = req.params;
     const { links } = req.body; // Array of { id, title, href, sequence_number }
 
-    // This is a simple implementation. In a real app, you might want to use a transaction.
+    // 1. Get current link IDs in database
+    const currentLinks = await PostLink.findAll({ where: { post_id: postId } });
+    const currentIds = currentLinks.map((l) => l.id);
+
+    // 2. Identify IDs to keep vs delete
+    const incomingIds = links.filter((l) => l.id).map((l) => l.id);
+    const idsToDelete = currentIds.filter((id) => !incomingIds.includes(id));
+
+    // 3. Delete removed links
+    if (idsToDelete.length > 0) {
+      await PostLink.destroy({ where: { id: idsToDelete } });
+    }
+
+    // 4. Update or Create
     for (const item of links) {
       if (item.id) {
-        // Update existing
         await PostLink.update(
           { title: item.title, href: item.href, sequence_number: item.sequence_number },
           { where: { id: item.id, post_id: postId } },
         );
       } else {
-        // Create new
         await PostLink.create({
           post_id: postId,
           title: item.title,
