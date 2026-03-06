@@ -11,6 +11,7 @@ const SheetColumn = require("./SheetColumn");
 const SheetRow = require("./SheetRow");
 const SheetCell = require("./SheetCell");
 const FooterLink = require("./FooterLink");
+const PostLink = require("./PostLink");
 
 // User - Post associations
 Post.belongsTo(User, { as: "creator", foreignKey: "created_by" });
@@ -23,6 +24,10 @@ ParentCategory.hasMany(Category, { foreignKey: "parent_id", as: "subcategories" 
 // Category - Post associations
 Post.belongsTo(Category, { foreignKey: "category_id", as: "category" });
 Category.hasMany(Post, { foreignKey: "category_id" });
+
+// Post - PostLink associations
+Post.hasMany(PostLink, { foreignKey: "post_id", as: "links" });
+PostLink.belongsTo(Post, { foreignKey: "post_id", as: "post" });
 
 // Category - Media associations
 Media.belongsTo(Category, { foreignKey: "category_id", as: "category" });
@@ -59,6 +64,7 @@ module.exports = {
   sequelize,
   User,
   Post,
+  PostLink,
   Category,
   ParentCategory,
   Media,

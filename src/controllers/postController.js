@@ -1,4 +1,4 @@
-const { Post, User, Category, ParentCategory } = require("../models");
+const { Post, User, Category, ParentCategory, PostLink } = require("../models");
 const { Op } = require("sequelize");
 const crypto = require("crypto");
 const slugify = require("../utils/slugify");
@@ -96,6 +96,7 @@ exports.getPublicPosts = async (req, res) => {
         attributes: ["id", "name", "parent_id", "slug"],
         ...(parentCategoryId ? { where: { parent_id: parentCategoryId }, required: true } : {}),
       },
+      { model: PostLink, as: "links" },
     ];
 
     const { count, rows } = await Post.findAndCountAll({
@@ -139,6 +140,7 @@ exports.getPostDetail = async (req, res) => {
       include: [
         { model: User, as: "creator", attributes: ["username"] },
         { model: Category, as: "category", attributes: ["name"] },
+        { model: PostLink, as: "links" },
       ],
     });
 
@@ -303,6 +305,7 @@ exports.getAllPostsAdmin = async (req, res) => {
           where: Object.keys(categoryWhere).length > 0 ? categoryWhere : undefined,
           required: Object.keys(categoryWhere).length > 0,
         },
+        { model: PostLink, as: "links" },
       ],
       distinct: true,
     });

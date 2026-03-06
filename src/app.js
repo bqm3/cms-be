@@ -15,6 +15,7 @@ const parentCategoryRoutes = require("./routes/parentCategoryRoutes");
 const templateRoutes = require("./routes/templateRoutes");
 const sheetRoutes = require("./routes/sheetRoutes");
 const footerLinkRoutes = require("./routes/footerLinkRoutes");
+const postLinkRoutes = require("./routes/postLinkRoutes");
 const sitemapRouter = require("./routes/sitemap");
 
 const app = express();
@@ -79,6 +80,7 @@ app.use("/api/media-types", mediaTypeRoutes);
 app.use("/api/templates", templateRoutes);
 app.use("/api/sheets", sheetRoutes);
 app.use("/api/footer-links", footerLinkRoutes);
+app.use("/api/post-links", postLinkRoutes);
 
 // ✅ Sitemap
 app.use(
