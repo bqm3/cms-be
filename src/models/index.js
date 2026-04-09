@@ -12,6 +12,7 @@ const SheetRow = require("./SheetRow");
 const SheetCell = require("./SheetCell");
 const FooterLink = require("./FooterLink");
 const PostLink = require("./PostLink");
+const UserSheetPermission = require("./UserSheetPermission");
 
 // User - Post associations
 Post.belongsTo(User, { as: "creator", foreignKey: "created_by" });
@@ -60,6 +61,13 @@ SheetCell.belongsTo(SheetRow, { foreignKey: "sheet_row_id", as: "row" });
 SheetColumn.hasMany(SheetCell, { foreignKey: "sheet_column_id", as: "cells" });
 SheetCell.belongsTo(SheetColumn, { foreignKey: "sheet_column_id", as: "column" });
 
+// User - Sheet permissions
+User.hasMany(UserSheetPermission, { foreignKey: "user_id", as: "sheetPermissions" });
+UserSheetPermission.belongsTo(User, { foreignKey: "user_id", as: "user" });
+
+Sheet.hasMany(UserSheetPermission, { foreignKey: "sheet_id", as: "userPermissions" });
+UserSheetPermission.belongsTo(Sheet, { foreignKey: "sheet_id", as: "sheet" });
+
 module.exports = {
   sequelize,
   User,
@@ -75,4 +83,5 @@ module.exports = {
   SheetRow,
   SheetCell,
   FooterLink,
+  UserSheetPermission,
 };

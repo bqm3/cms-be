@@ -61,8 +61,22 @@ function buildGridResponse(sheet) {
 exports.getAllSheets = async (req, res) => {
   try {
     const { q } = req.query;
+    const userId = req.user?.id;
+    const userRole = req.user?.role;
+
     const where = {};
     if (q) where.name = { [Op.like]: `%${q}%` };
+
+    // Nếu không phải admin, chỉ được xem các sheet đã được cấp quyền
+    if (userRole !== "admin") {
+      const { UserSheetPermission } = require("../models");
+      const permissions = await UserSheetPermission.findAll({
+        where: { user_id: userId },
+        attributes: ["sheet_id"],
+      });
+      const allowedSheetIds = permissions.map((p) => p.sheet_id);
+      where.id = { [Op.in]: allowedSheetIds };
+    }
 
     const sheets = await Sheet.findAll({
       where,
@@ -80,6 +94,15 @@ exports.getSheetById = async (req, res) => {
   try {
     const sheetId = Number(req.params.id);
     if (!sheetId) return res.status(400).json({ message: "Invalid sheet id" });
+
+    // Permission check for non-admin
+    if (req.user?.role !== "admin") {
+      const { UserSheetPermission } = require("../models");
+      const hasPermission = await UserSheetPermission.findOne({
+        where: { user_id: req.user.id, sheet_id: sheetId },
+      });
+      if (!hasPermission) return res.status(403).json({ message: "Access denied" });
+    }
 
     const sheet = await Sheet.findByPk(sheetId, {
       include: [
@@ -504,6 +527,15 @@ exports.listRows = async (req, res) => {
   try {
     const sheetId = Number(req.params.sheetId);
     if (!sheetId) return res.status(400).json({ message: "Invalid sheetId" });
+
+    // Permission check for non-admin
+    if (req.user?.role !== "admin") {
+      const { UserSheetPermission } = require("../models");
+      const hasPermission = await UserSheetPermission.findOne({
+        where: { user_id: req.user.id, sheet_id: sheetId },
+      });
+      if (!hasPermission) return res.status(403).json({ message: "Access denied" });
+    }
 
     // query params
     const q = (req.query.q || "").trim();

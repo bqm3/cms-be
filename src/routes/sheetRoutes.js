@@ -2,6 +2,7 @@ const express = require("express");
 const router = express.Router();
 
 const sheetController = require("../controllers/sheetController");
+const permissionController = require("../controllers/sheetPermissionController");
 const { authMiddleware, adminMiddleware } = require("../middleware/auth");
 
 /**
@@ -13,8 +14,8 @@ const { authMiddleware, adminMiddleware } = require("../middleware/auth");
 // Public: xem sheet dạng excel (columns + rows + cells)
 router.get("/:id", sheetController.getSheetById);
 
-// Admin: list sheets
-router.get("/", authMiddleware, adminMiddleware, sheetController.getAllSheets);
+// Authenticated users: list sheets (admins see all, users see filtered)
+router.get("/", authMiddleware, sheetController.getAllSheets);
 
 // Admin: create sheet (có thể tạo kèm columns)
 router.post("/", authMiddleware, adminMiddleware, sheetController.createSheet);
@@ -55,5 +56,15 @@ router.delete("/:sheetId/rows/:rowId", authMiddleware, adminMiddleware, sheetCon
 router.put("/:sheetId/cells/bulk", authMiddleware, adminMiddleware, sheetController.bulkUpsertCells);
 
 // List rows (search/sort/pagination)
-router.get("/:sheetId/rows/list", sheetController.listRows); 
+router.get("/:sheetId/rows/list", authMiddleware, sheetController.listRows);
+
+/**
+ * ======================
+ * PERMISSIONS (Cấp quyền)
+ * ======================
+ */
+router.get("/permissions/:userId", authMiddleware, adminMiddleware, permissionController.getUserSheetPermissions);
+router.post("/permissions/sync", authMiddleware, adminMiddleware, permissionController.syncUserPermissions);
+router.post("/permissions/assign", authMiddleware, adminMiddleware, permissionController.assignSheetPermission);
+router.delete("/permissions/remove", authMiddleware, adminMiddleware, permissionController.removeSheetPermission);
 module.exports = router;
