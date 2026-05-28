@@ -247,9 +247,9 @@ exports.getAllPostsAdmin = async (req, res) => {
     let where = { is_deleted: 0 };
 
     // Role based filtering
-    if (req.user.role !== "admin") {
-      where.created_by = req.user.id;
-    }
+    // if (req.user.role !== "admin") {
+    //   where.created_by = req.user.id;
+    // }
 
     if (category) where.category_id = category;
     if (topic) where.topic_name = topic;
@@ -289,8 +289,6 @@ exports.getAllPostsAdmin = async (req, res) => {
       order,
       limit,
       offset,
-
-      // 🔥 BỎ content ở đây
       attributes: {
         exclude: ["content"],
       },
@@ -348,46 +346,52 @@ exports.copyPost = async (req, res) => {
       return res.status(403).json({ message: "Unauthorized" });
     }
 
-    const newTitle = `${post.title}`;
-    const newSlug = await generateSlug(newTitle);
+    const quantity = Math.min(Math.max(parseInt(req.body?.quantity, 10) || 1, 1), 100);
+    const duplicatedPosts = [];
 
-    const duplicatedPost = await Post.create({
-      sequence_number: post.sequence_number,
-      title: newTitle,
-      post_title: post.post_title,
-      content: post.content,
-      category_id: post.category_id,
-      topic_name: post.topic_name,
-      view_count: 0,
-      logo: post.logo,
-      slug: newSlug,
-      description: post.description,
+    for (let index = 0; index < quantity; index += 1) {
+      const newTitle = quantity === 1 ? `${post.title}` : `${post.title} Copy ${index + 1}`;
+      duplicatedPosts.push(
+        await Post.create({
+          sequence_number: post.sequence_number,
+          title: newTitle,
+          post_title: post.post_title,
+          content: post.content,
+          category_id: post.category_id,
+          topic_name: post.topic_name,
+          view_count: 0,
+          logo: post.logo,
+          slug: await generateSlug(newTitle),
+          description: post.description,
+          meta_override: !!post.meta_override,
+          meta_title: post.meta_title || "",
+          meta_keyword: post.meta_keyword || "",
+          meta_description: post.meta_description || "",
+          created_by: req.user.id,
+          is_hidden: !!post.is_hidden,
+          is_approved: req.user.role === "admin",
+        }),
+      );
+    }
 
-      // ✅ copy SEO meta
-      meta_override: !!post.meta_override,
-      meta_title: post.meta_title || "",
-      meta_keyword: post.meta_keyword || "",
-      meta_description: post.meta_description || "",
-
-      created_by: req.user.id,
-      is_approved: req.user.role === "admin",
+    return res.status(201).json({
+      message: `Copied ${duplicatedPosts.length} post(s) successfully`,
+      quantity: duplicatedPosts.length,
+      posts: duplicatedPosts,
     });
-
-    return res.status(201).json(duplicatedPost);
   } catch (err) {
     return res.status(500).json({ message: err.message });
   }
 };
-
 // Admin/Owner: Update post
 exports.updatePost = async (req, res) => {
   try {
     const post = await Post.findOne({ where: { id: req.params.id, is_deleted: 0 } });
     if (!post) return res.status(404).json({ message: "Post not found" });
 
-    if (req.user.role !== "admin" && post.created_by !== req.user.id) {
-      return res.status(403).json({ message: "Unauthorized" });
-    }
+    // if (req.user.role !== "admin" && post.created_by !== req.user.id) {
+    //   return res.status(403).json({ message: "Unauthorized" });
+    // }
 
     const {
       sequence_number,
@@ -443,13 +447,13 @@ exports.updatePost = async (req, res) => {
       }
     }
 
-    post.updated_by = req.user.id;
+    // post.updated_by = req.user.id;
 
-    if (req.user.role === "admin" && is_approved !== undefined) {
-      post.is_approved = is_approved;
-    } else if (req.user.role !== "admin") {
-      post.is_approved = false;
-    }
+    // if (req.user.role === "admin" && is_approved !== undefined) {
+    //   post.is_approved = is_approved;
+    // } else if (req.user.role !== "admin") {
+    //   post.is_approved = false;
+    // }
 
     await post.save();
     res.json(post);

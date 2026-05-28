@@ -18,6 +18,6 @@ router.put("/:id/hidden", authMiddleware, postController.setHiddenPost);
 // Admin routes
 router.get("/admin", authMiddleware, postController.getAllPostsAdmin);
 router.patch("/:id/approve", authMiddleware, adminMiddleware, postController.approvePost);
-router.delete("/:id", authMiddleware, adminMiddleware, postController.deletePost);
+router.delete("/:id", authMiddleware, postController.deletePost);
 
 module.exports = router;

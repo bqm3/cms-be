@@ -16,6 +16,7 @@ const templateRoutes = require("./routes/templateRoutes");
 const sheetRoutes = require("./routes/sheetRoutes");
 const footerLinkRoutes = require("./routes/footerLinkRoutes");
 const postLinkRoutes = require("./routes/postLinkRoutes");
+const reviewRoutes = require("./routes/reviewRoutes");
 const sitemapRouter = require("./routes/sitemap");
 
 const app = express();
@@ -51,25 +52,18 @@ const corsOptions = {
   optionsSuccessStatus: 200,
 };
 
-// ✅ Nếu bạn deploy sau reverse proxy (nginx/cloudflare) thì bật:
 app.set("trust proxy", 1);
 
-// ✅ Parse cookies
 app.use(cookieParser());
 
-// ✅ CORS + preflight
 app.use(cors(corsOptions));
 app.options(/.*/, cors(corsOptions));
 
-// ✅ Tăng limit body (tránh lỗi payload lớn ở Express)
-// Lưu ý: 413 vẫn có thể đến từ Nginx => cần client_max_body_size ở Nginx nữa.
 app.use(express.json({ limit: "200mb" }));
 app.use(express.urlencoded({ extended: true, limit: "200mb" }));
 
-// ✅ Static folder for uploads
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
-// ✅ Routes
 app.use("/api/auth", authRoutes);
 app.use("/api/posts", postRoutes);
 app.use("/api/categories", categoryRoutes);
@@ -81,6 +75,7 @@ app.use("/api/templates", templateRoutes);
 app.use("/api/sheets", sheetRoutes);
 app.use("/api/footer-links", footerLinkRoutes);
 app.use("/api/post-links", postLinkRoutes);
+app.use("/api/reviews", reviewRoutes);
 
 // ✅ Sitemap
 app.use(
@@ -104,20 +99,13 @@ Sitemap: ${origin}/sitemap.xml
   );
 });
 
-// ✅ Health check
 app.get("/", (req, res) => {
   res.send("CMS API is running...");
 });
 
-/**
- * ✅ Error handler cơ bản (để thấy rõ lỗi CORS / runtime)
- * (Nếu bạn có error handler riêng thì có thể bỏ phần này)
- */
 app.use((err, req, res, next) => {
-  // CORS block thường vào đây với Error("Not allowed by CORS...")
   console.error("APP ERROR:", err?.message || err);
 
-  // Đừng leak stack ở production
   const status = err?.status || 500;
   res.status(status).json({
     message: err?.message || "Internal server error",

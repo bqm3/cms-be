@@ -13,6 +13,7 @@ const SheetCell = require("./SheetCell");
 const FooterLink = require("./FooterLink");
 const PostLink = require("./PostLink");
 const UserSheetPermission = require("./UserSheetPermission");
+const Review = require("./Review");
 
 // User - Post associations
 Post.belongsTo(User, { as: "creator", foreignKey: "created_by" });
@@ -83,5 +84,6 @@ module.exports = {
   SheetRow,
   SheetCell,
   FooterLink,
+  Review,
   UserSheetPermission,
 };
