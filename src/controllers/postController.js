@@ -9,6 +9,14 @@ function generateSlug(title) {
   return `${baseSlug}-${random}`;
 }
 
+function normalizeSlugInput(slugInput, fallbackTitle) {
+  const raw = String(slugInput ?? "").trim();
+  if (raw) {
+    return slugify(raw, { lower: true, strict: true });
+  }
+  return generateSlug(fallbackTitle);
+}
+
 function buildAutoMetaFromTitle(titleRaw) {
   const t = String(titleRaw || "").trim();
   if (!t) return { meta_title: null, meta_keyword: null, meta_description: null };
@@ -163,11 +171,13 @@ exports.createPost = async (req, res) => {
     const {
       sequence_number,
       title,
+      slug,
       content,
       category_id,
       topic_name,
       view_count,
       is_hidden,
+      logo_url,
 
       // ✅ meta fields
       meta_title,
@@ -194,8 +204,8 @@ exports.createPost = async (req, res) => {
       }
     }
 
-    const logo = req.file ? `/uploads/${req.file.filename}` : null;
-    const slug = await generateSlug(cleanTitle);
+    const logo = req.file ? `/uploads/${req.file.filename}` : (String(logo_url ?? "").trim() || null);
+    const finalSlug = normalizeSlugInput(slug, cleanTitle);
 
     const override = parseBool(meta_override);
 
@@ -220,7 +230,7 @@ exports.createPost = async (req, res) => {
       topic_name: (topic_name ?? "").trim() || null,
       view_count: Number(view_count) || 0,
       logo,
-      slug,
+      slug: finalSlug,
 
       // ✅ hidden
       is_hidden: parseBool(is_hidden),
@@ -396,12 +406,14 @@ exports.updatePost = async (req, res) => {
     const {
       sequence_number,
       title,
+      slug,
       content,
       category_id,
       topic_name,
       is_approved,
       view_count,
       is_hidden,
+      logo_url,
 
       // ✅ meta
       meta_title,
@@ -412,6 +424,8 @@ exports.updatePost = async (req, res) => {
 
     if (req.file) {
       post.logo = `/uploads/${req.file.filename}`;
+    } else if (logo_url !== undefined) {
+      post.logo = String(logo_url ?? "").trim() || null;
     }
 
     if (sequence_number !== undefined) post.sequence_number = sequence_number;
@@ -426,6 +440,10 @@ exports.updatePost = async (req, res) => {
     if (content !== undefined) post.content = content;
     if (category_id !== undefined) post.category_id = category_id || null;
     if (topic_name !== undefined) post.topic_name = (topic_name ?? "").trim() || null;
+    if (slug !== undefined) {
+      const cleanTitle = String(post.title || "").trim();
+      post.slug = normalizeSlugInput(slug, cleanTitle || "post");
+    }
 
     // ✅ meta logic
     if (meta_override !== undefined) {
