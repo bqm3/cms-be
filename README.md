@@ -21,7 +21,7 @@ Node.js + Express + MySQL API for CMS.
 ### Public Posts
 - `GET /api/posts/public` - Get all approved posts.
   - Default order: `created_at:DESC`
-  - Query params: `sort=view_count:DESC` or `sort=sequence_number:ASC`
+  - Public listing ignores external `sort` and always returns newest posts first.
 - `GET /api/posts/public/:id` - Get post detail (increments view count)
 
 ### Protected Posts (Requires Auth header: `Authorization: Bearer <token>`)

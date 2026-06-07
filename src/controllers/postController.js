@@ -47,24 +47,13 @@ exports.getPublicPosts = async (req, res) => {
     const category = req.params.category || req.query.category;
     const parentCategory = req.params.parentCategory || req.query.parentCategory;
 
-    // sort
-    // Default public listing should show the newest posts first.
-    // Use id as a tie-breaker so same-second inserts keep a stable order.
-    let order = [
+    // Public listing must always show newest posts first.
+    // We ignore external sort requests here so stale clients cannot
+    // accidentally fall back to sequence_number ordering.
+    const order = [
       ["created_at", "DESC"],
       ["id", "DESC"],
     ];
-    if (sort) {
-      const [field, directionRaw] = String(sort).split(":");
-      const direction = (directionRaw || "DESC").toUpperCase() === "ASC" ? "ASC" : "DESC";
-
-      if (["view_count", "sequence_number", "created_at"].includes(field)) {
-        order = [[field, direction]];
-        if (field === "created_at" && direction === "DESC") {
-          order.push(["id", "DESC"]);
-        }
-      }
-    }
 
     // where
     const where = {
