@@ -17,11 +17,12 @@ function normalizeSlugInput(slugInput, fallbackTitle) {
   return generateSlug(fallbackTitle);
 }
 
-function buildAutoMetaFromTitle(titleRaw) {
+function buildAutoMetaFromTitle(titleRaw, topicName = null) {
   const t = String(titleRaw || "").trim();
   if (!t) return { meta_title: null, meta_keyword: null, meta_description: null };
 
-  const meta_title = `${t} promotion latest`;
+  const isModule = topicName === "store-coupon-module";
+  const meta_title = isModule ? `${t} Best Online Coupons & Deals` : `${t} promotion latest`;
 
   const meta_description =
     `Use Globalpromotionllc.com to find the latest discount codes and best deals when shopping ` +
@@ -32,6 +33,37 @@ function buildAutoMetaFromTitle(titleRaw) {
   const meta_keyword = `${t}, ${t} promotion, ${t} promotion newest`;
 
   return { meta_title, meta_keyword, meta_description };
+}
+
+async function syncPostLinksFromCoupons(post) {
+  if (post.topic_name !== "store-coupon-module") return;
+  try {
+    let contentObj = post.content;
+    if (typeof contentObj === "string") {
+      contentObj = JSON.parse(contentObj);
+    }
+    if (!contentObj || !Array.isArray(contentObj.coupons)) return;
+
+    // Delete existing links for this post
+    await PostLink.destroy({ where: { post_id: post.id } });
+
+    // Create new links from coupons
+    const linksToCreate = contentObj.coupons.map((coupon, index) => {
+      const linkHref = coupon.url || coupon.buttonHref || "";
+      return {
+        post_id: post.id,
+        title: coupon.title || `Coupon ${index + 1}`,
+        href: linkHref,
+        sequence_number: index,
+      };
+    });
+
+    if (linksToCreate.length > 0) {
+      await PostLink.bulkCreate(linksToCreate);
+    }
+  } catch (err) {
+    console.error("Error syncing post links from coupons:", err);
+  }
 }
 
 function parseBool(v) {
@@ -206,7 +238,7 @@ exports.createPost = async (req, res) => {
 
     const override = parseBool(meta_override);
 
-    const autoMeta = buildAutoMetaFromTitle(cleanTitle);
+    const autoMeta = buildAutoMetaFromTitle(cleanTitle, topic_name);
     const finalMeta = override
       ? {
           meta_title: (meta_title ?? "").trim() || null,
@@ -238,6 +270,8 @@ exports.createPost = async (req, res) => {
       created_by: req.user.id,
       is_approved: req.user.role === "admin",
     });
+
+    await syncPostLinksFromCoupons(post);
 
     return res.status(201).json(post);
   } catch (err) {
@@ -454,7 +488,7 @@ exports.updatePost = async (req, res) => {
       } else {
         // auto-generate from latest title
         const baseTitle = String(post.title || "").trim();
-        const autoMeta = buildAutoMetaFromTitle(baseTitle);
+        const autoMeta = buildAutoMetaFromTitle(baseTitle, post.topic_name);
         post.meta_title = autoMeta.meta_title;
         post.meta_keyword = autoMeta.meta_keyword;
         post.meta_description = autoMeta.meta_description;
@@ -471,6 +505,7 @@ exports.updatePost = async (req, res) => {
     // }
 
     await post.save();
+    await syncPostLinksFromCoupons(post);
     res.json(post);
   } catch (err) {
     res.status(500).json({ message: err.message });
