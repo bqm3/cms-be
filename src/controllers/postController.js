@@ -231,7 +231,7 @@ exports.createPost = async (req, res) => {
 
     let finalTitle = cleanTitle;
     if (topic_name === "store-coupon-module" && !finalTitle.endsWith(" Best Online Coupons & Deals")) {
-      finalTitle = `${finalTitle} Best Online Coupons & Deals`;
+      finalTitle = `${finalTitle}`;
     }
 
     // category_id nullable
@@ -483,7 +483,7 @@ exports.updatePost = async (req, res) => {
     if (topic_name !== undefined) post.topic_name = (topic_name ?? "").trim() || null;
 
     if (post.topic_name === "store-coupon-module" && post.title && !post.title.endsWith(" Best Online Coupons & Deals")) {
-      post.title = `${post.title} Best Online Coupons & Deals`;
+      post.title = `${post.title}`;
     }
 
     if (slug !== undefined) {
