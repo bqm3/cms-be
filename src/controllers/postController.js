@@ -22,15 +22,20 @@ function buildAutoMetaFromTitle(titleRaw, topicName = null) {
   if (!t) return { meta_title: null, meta_keyword: null, meta_description: null };
 
   const isModule = topicName === "store-coupon-module";
-  const meta_title = isModule ? `${t} Best Online Coupons & Deals` : `${t} promotion latest`;
+  const suffix = " Best Online Coupons & Deals";
+  const tClean = isModule && t.endsWith(suffix) ? t.slice(0, -suffix.length).trim() : t;
+
+  const meta_title = isModule 
+    ? (t.endsWith(suffix) ? t : `${t}${suffix}`) 
+    : `${t} promotion latest`;
 
   const meta_description =
     `Use Globalpromotionllc.com to find the latest discount codes and best deals when shopping ` +
-    `online at ${t} through Globalpromotionllc.com. Save more on every order with our verified discount codes, ` +
+    `online at ${tClean} through Globalpromotionllc.com. Save more on every order with our verified discount codes, ` +
     `food coupons, and cashback offers.`;
 
   // keyword: Title, Title promotion, Title promotion newest
-  const meta_keyword = `${t}, ${t} promotion, ${t} promotion newest`;
+  const meta_keyword = `${tClean}, ${tClean} promotion, ${tClean} promotion newest`;
 
   return { meta_title, meta_keyword, meta_description };
 }
@@ -224,6 +229,11 @@ exports.createPost = async (req, res) => {
       return res.status(400).json({ message: "Tiêu đề là bắt buộc" });
     }
 
+    let finalTitle = cleanTitle;
+    if (topic_name === "store-coupon-module" && !finalTitle.endsWith(" Best Online Coupons & Deals")) {
+      finalTitle = `${finalTitle} Best Online Coupons & Deals`;
+    }
+
     // category_id nullable
     let catId = null;
     if (category_id !== undefined && category_id !== null && String(category_id).trim() !== "") {
@@ -234,11 +244,11 @@ exports.createPost = async (req, res) => {
     }
 
     const logo = req.file ? `/uploads/${req.file.filename}` : (String(logo_url ?? "").trim() || null);
-    const finalSlug = normalizeSlugInput(slug, cleanTitle);
+    const finalSlug = normalizeSlugInput(slug, finalTitle);
 
     const override = parseBool(meta_override);
 
-    const autoMeta = buildAutoMetaFromTitle(cleanTitle, topic_name);
+    const autoMeta = buildAutoMetaFromTitle(finalTitle, topic_name);
     const finalMeta = override
       ? {
           meta_title: (meta_title ?? "").trim() || null,
@@ -253,7 +263,7 @@ exports.createPost = async (req, res) => {
 
     const post = await Post.create({
       sequence_number: Number(sequence_number) || 0,
-      title: cleanTitle,
+      title: finalTitle,
       content: content ?? "",
       category_id: catId,
       topic_name: (topic_name ?? "").trim() || null,
@@ -471,6 +481,11 @@ exports.updatePost = async (req, res) => {
     if (content !== undefined) post.content = content;
     if (category_id !== undefined) post.category_id = category_id || null;
     if (topic_name !== undefined) post.topic_name = (topic_name ?? "").trim() || null;
+
+    if (post.topic_name === "store-coupon-module" && post.title && !post.title.endsWith(" Best Online Coupons & Deals")) {
+      post.title = `${post.title} Best Online Coupons & Deals`;
+    }
+
     if (slug !== undefined) {
       const cleanTitle = String(post.title || "").trim();
       post.slug = normalizeSlugInput(slug, cleanTitle || "post");
