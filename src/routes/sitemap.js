@@ -79,10 +79,10 @@ module.exports = function sitemapRouter(opts = {}) {
         });
       }
 
-      // ✅ route post detail: /site/:slug
+      // ✅ route post detail: /:slug
       for (const p of posts) {
         urls.push({
-          loc: `${origin}/site/${encodeURIComponent(p.slug)}`,
+          loc: `${origin}/${encodeURIComponent(p.slug)}`,
           lastmod: toIsoDate(p.updated_at),
           changefreq: "weekly",
           priority: "0.8",
