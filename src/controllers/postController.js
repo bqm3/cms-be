@@ -5,8 +5,9 @@ const slugify = require("../utils/slugify");
 
 function generateSlug(title) {
   const baseSlug = slugify(title, { lower: true, strict: true });
-  const random = crypto.randomInt(100000, 1000000); // 6 số
-  return `${baseSlug}-${random}`;
+  // const random = crypto.randomInt(100000, 1000000); // 6 số
+  // return `${baseSlug}-${random}`;
+  return baseSlug
 }
 
 function normalizeSlugInput(slugInput, fallbackTitle) {
@@ -57,7 +58,7 @@ async function syncPostLinksFromCoupons(post) {
       const linkHref = coupon.url || coupon.buttonHref || "";
       return {
         post_id: post.id,
-        title: coupon.title || `Coupon ${index + 1}`,
+        title: coupon.content || coupon.title || `Coupon ${index + 1}`,
         href: linkHref,
         sequence_number: index,
       };
