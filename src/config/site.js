@@ -1,4 +1,4 @@
-const canonicalSiteUrl = (process.env.SITE_URL || "https://couponza.com").replace(/\/+$/, "");
+const canonicalSiteUrl = (process.env.SITE_URL || "https://couponzas.com").replace(/\/+$/, "");
 
 const extraAllowedOrigins = (process.env.ALLOWED_ORIGINS || "https://globalpromotionllc.com")
   .split(",")
@@ -14,7 +14,7 @@ const allowedOrigins = [
   "http://localhost:5173",
   "http://172.21.164.1:5173",
   "http://192.168.1.19:5173",
-  "https://couponza.com",
+  "https://couponzas.com",
   canonicalSiteUrl,
   ...extraAllowedOrigins,
   "https://0858-101-99-6-230.ngrok-free.app/",
