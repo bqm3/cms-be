@@ -489,7 +489,17 @@ exports.updatePost = async (req, res) => {
 
     if (slug !== undefined) {
       const cleanTitle = String(post.title || "").trim();
-      post.slug = normalizeSlugInput(slug, cleanTitle || "post");
+      const targetSlug = normalizeSlugInput(slug, cleanTitle || "post");
+      const existing = await Post.findOne({
+        where: {
+          slug: targetSlug,
+          id: { [Op.ne]: post.id },
+        },
+      });
+      if (existing) {
+        return res.status(400).json({ message: "Slug này đã tồn tại, vui lòng chọn slug khác" });
+      }
+      post.slug = targetSlug;
     }
 
     // ✅ meta logic

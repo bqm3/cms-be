@@ -1,5 +1,6 @@
-const { DataTypes } = require("sequelize");
+const { DataTypes, Op } = require("sequelize");
 const sequelize = require("../config/db");
+const slugify = require("../utils/slugify");
 
 const Post = sequelize.define(
   "Post",
@@ -94,6 +95,66 @@ const Post = sequelize.define(
     timestamps: true,
     createdAt: "created_at",
     updatedAt: "updated_at",
+    hooks: {
+      beforeValidate: async (post) => {
+        // Generate slug if title is provided but slug is not
+        if (post.title && (!post.slug || post.slug.trim() === "")) {
+          post.slug = slugify(post.title);
+        }
+
+        // Ensure slug is unique
+        if (post.slug) {
+          let baseSlug = post.slug;
+          let slug = baseSlug;
+          let count = 1;
+
+          while (true) {
+            const existing = await Post.findOne({
+              where: {
+                slug: slug,
+                id: { [Op.ne]: post.id || 0 },
+              },
+            });
+            if (!existing) break;
+            slug = `${baseSlug}-${count}`;
+            count++;
+          }
+          post.slug = slug;
+        }
+      },
+      beforeUpdate: async (post) => {
+        // If slug is explicitly changed
+        if (post.changed("slug") && post.slug) {
+          const existing = await Post.findOne({
+            where: {
+              slug: post.slug,
+              id: { [Op.ne]: post.id },
+            },
+          });
+          if (existing) {
+            throw new Error("Slug đã tồn tại, vui lòng chọn slug khác");
+          }
+        }
+        // If title is changed and slug is empty
+        else if (post.changed("title") && !post.slug) {
+          let baseSlug = slugify(post.title);
+          let slug = baseSlug;
+          let count = 1;
+          while (true) {
+            const existing = await Post.findOne({
+              where: {
+                slug: slug,
+                id: { [Op.ne]: post.id },
+              },
+            });
+            if (!existing) break;
+            slug = `${baseSlug}-${count}`;
+            count++;
+          }
+          post.slug = slug;
+        }
+      },
+    },
   },
 );
 
