@@ -4,6 +4,7 @@ const { Op } = require("sequelize");
 
 const Post = require("../models/Post");
 const Category = require("../models/Category");
+const { canonicalSiteUrl } = require("../config/site");
 
 function escXml(s = "") {
   return String(s)
@@ -25,7 +26,7 @@ module.exports = function sitemapRouter(opts = {}) {
   const router = express.Router();
 
   const {
-    siteUrl = process.env.SITE_URL || "https://globalpromotionllc.com",
+    siteUrl = canonicalSiteUrl,
     enableGzip = true,
     maxUrls = 50000,
     cacheSeconds = 300,
@@ -69,7 +70,6 @@ module.exports = function sitemapRouter(opts = {}) {
 
       urls.push({ loc: `${origin}/`, changefreq: "daily", priority: "1.0" });
 
-      // ⚠️ đổi nếu route category của bạn khác
       for (const c of cats) {
         urls.push({
           loc: `${origin}/category/${encodeURIComponent(c.slug)}`,
@@ -79,7 +79,6 @@ module.exports = function sitemapRouter(opts = {}) {
         });
       }
 
-      // ✅ route post detail: /:slug
       for (const p of posts) {
         urls.push({
           loc: `${origin}/${encodeURIComponent(p.slug)}`,

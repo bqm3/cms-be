@@ -4,7 +4,7 @@ const cors = require("cors");
 const cookieParser = require("cookie-parser");
 const path = require("path");
 
-// const sequelize = require("./config/db"); // nếu bạn chỉ import để init thì giữ, không dùng thì bỏ
+// const sequelize = require("./config/db"); // if you only import to init, keep it; otherwise remove
 const authRoutes = require("./routes/authRoutes");
 const postRoutes = require("./routes/postRoutes");
 const categoryRoutes = require("./routes/categoryRoutes");
@@ -18,30 +18,25 @@ const footerLinkRoutes = require("./routes/footerLinkRoutes");
 const postLinkRoutes = require("./routes/postLinkRoutes");
 const reviewRoutes = require("./routes/reviewRoutes");
 const sitemapRouter = require("./routes/sitemap");
+const {
+  canonicalSiteUrl,
+  allowedOrigins,
+  normalizeOrigin,
+} = require("./config/site");
 
 const app = express();
 
 /**
- * ✅ CORS:
- * - credentials: true => KHÔNG được Access-Control-Allow-Origin: *
- * - dùng allowlist + callback
+ * CORS:
+ * - credentials: true => cannot use Access-Control-Allow-Origin: *
+ * - use allowlist + callback
  */
-const allowedOrigins = [
-  "http://localhost:3000",
-  "http://localhost:5173",
-  "http://172.21.164.1:5173",
-  "http://192.168.1.19:5173",
-  "https://globalpromotionllc.com",
-  "https://0858-101-99-6-230.ngrok-free.app/",
-  "https://f281-2001-ee0-49c4-a950-fdfb-7e67-3a8f-5e7.ngrok-free.app",
-];
-
 const corsOptions = {
   origin: function (origin, cb) {
-    // Cho phép server-to-server/curl/postman (origin undefined)
+    // Allow server-to-server/curl/postman (origin undefined)
     if (!origin) return cb(null, true);
 
-    if (allowedOrigins.includes(origin)) return cb(null, true);
+    if (allowedOrigins.includes(normalizeOrigin(origin))) return cb(null, true);
 
     return cb(new Error("Not allowed by CORS: " + origin));
   },
@@ -77,24 +72,21 @@ app.use("/api/footer-links", footerLinkRoutes);
 app.use("/api/post-links", postLinkRoutes);
 app.use("/api/reviews", reviewRoutes);
 
-// ✅ Sitemap
+// Sitemap
 app.use(
   sitemapRouter({
-    siteUrl: "https://globalpromotionllc.com",
+    siteUrl: canonicalSiteUrl,
     enableGzip: true,
   }),
 );
 
-// ✅ robots.txt
+// robots.txt
 app.get("/robots.txt", (req, res) => {
-  // Ưu tiên env nếu có
-  const origin = process.env.SITE_URL || `${req.protocol}://${req.get("host")}`;
-
   res.type("text/plain").send(
     `User-agent: *
 Allow: /
 
-Sitemap: ${origin}/sitemap.xml
+Sitemap: ${canonicalSiteUrl}/sitemap.xml
 `,
   );
 });
