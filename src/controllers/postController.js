@@ -31,8 +31,8 @@ function buildAutoMetaFromTitle(titleRaw, topicName = null) {
     : `${t} promotion latest`;
 
   const meta_description =
-    `Use Globalpromotionllc.com to find the latest discount codes and best deals when shopping ` +
-    `online at ${tClean} through Globalpromotionllc.com. Save more on every order with our verified discount codes, ` +
+    `Use couponzas.com to find the latest discount codes and best deals when shopping ` +
+    `online at ${tClean} through couponzas.com. Save more on every order with our verified discount codes, ` +
     `food coupons, and cashback offers.`;
 
   // keyword: Title, Title promotion, Title promotion newest

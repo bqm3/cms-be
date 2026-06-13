@@ -17,8 +17,8 @@ function buildAutoMetaFromTitle(titleRaw) {
     meta_title: `${t} promotion latest`,
     meta_keyword: `${t}, ${t} promotion, ${t} promotion newest`,
     meta_description:
-      `Use Globalpromotionllc.com to find the latest discount codes and best deals when shopping ` +
-      `online at ${t} through Globalpromotionllc.com. Save more on every order with our verified discount codes, ` +
+      `Use couponzas.com to find the latest discount codes and best deals when shopping ` +
+      `online at ${t} through couponzas.com. Save more on every order with our verified discount codes, ` +
       `food coupons, and cashback offers.`,
   };
 }
