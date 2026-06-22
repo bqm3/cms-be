@@ -3,6 +3,8 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 require('dotenv').config();
 
+const ACCESS_TOKEN_EXPIRES_IN = '30d';
+
 exports.register = async (req, res) => {
   try {
     const { username, password, role } = req.body;
@@ -41,8 +43,7 @@ exports.login = async (req, res) => {
     const accessToken = jwt.sign(
       { id: user.id, username: user.username, role: user.role },
       process.env.JWT_SECRET,
-      { expiresIn: '15m' }
-      // { expiresIn: '30s' }
+      { expiresIn: ACCESS_TOKEN_EXPIRES_IN }
     );
 
     const refreshToken = jwt.sign(
@@ -92,7 +93,7 @@ exports.refresh = async (req, res) => {
       const accessToken = jwt.sign(
         { id: user.id, username: user.username, role: user.role },
         process.env.JWT_SECRET,
-        { expiresIn: '15m' }
+        { expiresIn: ACCESS_TOKEN_EXPIRES_IN }
       );
 
       res.json({ token: accessToken });
