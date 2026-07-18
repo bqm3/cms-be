@@ -15,6 +15,7 @@ router.post("/", authMiddleware, upload.single("logo"), postController.createPos
 router.post("/:id/copy", authMiddleware, postController.copyPost);
 router.put("/:id", authMiddleware, upload.single("logo"), postController.updatePost);
 router.put("/:id/hidden", authMiddleware, postController.setHiddenPost);
+router.patch("/bulk-hidden", authMiddleware, adminMiddleware, postController.bulkSetHidden);
 // Admin routes
 router.get("/admin", authMiddleware, postController.getAllPostsAdmin);
 router.patch("/:id/approve", authMiddleware, adminMiddleware, postController.approvePost);

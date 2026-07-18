@@ -575,3 +575,24 @@ exports.setHiddenPost = async (req, res) => {
     res.status(500).json({ message: err.message });
   }
 };
+
+// Admin: Bulk set hidden for ALL non-deleted posts (single UPDATE query — optimized for large datasets)
+exports.bulkSetHidden = async (req, res) => {
+  try {
+    if (req.user.role !== "admin") {
+      return res.status(403).json({ message: "Unauthorized" });
+    }
+
+    const raw = req.body?.is_hidden;
+    const isHidden = raw === true || raw === "true" || raw === 1 || raw === "1";
+
+    const [affectedRows] = await Post.update(
+      { is_hidden: isHidden, updated_by: req.user.id },
+      { where: { is_deleted: 0 } }
+    );
+
+    res.json({ message: "Updated", is_hidden: isHidden, affected: affectedRows });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};

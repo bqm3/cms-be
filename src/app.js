@@ -17,6 +17,7 @@ const sheetRoutes = require("./routes/sheetRoutes");
 const footerLinkRoutes = require("./routes/footerLinkRoutes");
 const postLinkRoutes = require("./routes/postLinkRoutes");
 const reviewRoutes = require("./routes/reviewRoutes");
+const featuredDealRoutes = require("./routes/featuredDealRoutes");
 const sitemapRouter = require("./routes/sitemap");
 const {
   canonicalSiteUrl,
@@ -71,6 +72,7 @@ app.use("/api/sheets", sheetRoutes);
 app.use("/api/footer-links", footerLinkRoutes);
 app.use("/api/post-links", postLinkRoutes);
 app.use("/api/reviews", reviewRoutes);
+app.use("/api/featured-deals", featuredDealRoutes);
 
 // Sitemap
 app.use(
