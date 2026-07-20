@@ -74,7 +74,8 @@ exports.getAllParentCategories = async (req, res) => {
 exports.createParentCategory = async (req, res) => {
   try {
     const { name, slug, sequence_number } = req.body;
-    const parentCategory = await ParentCategory.create({ name, slug, sequence_number });
+    const image = req.file ? `/uploads/parent-categories/${req.file.filename}` : null;
+    const parentCategory = await ParentCategory.create({ name, slug, sequence_number, image });
     res.status(201).json(parentCategory);
   } catch (err) {
     if (err.name === "SequelizeValidationError" || err.name === "SequelizeUniqueConstraintError") {
@@ -93,6 +94,9 @@ exports.updateParentCategory = async (req, res) => {
     parentCategory.name = name || parentCategory.name;
     parentCategory.slug = slug || parentCategory.slug;
     if (sequence_number !== undefined) parentCategory.sequence_number = sequence_number;
+    if (req.file) {
+      parentCategory.image = `/uploads/parent-categories/${req.file.filename}`;
+    }
 
     await parentCategory.save();
 

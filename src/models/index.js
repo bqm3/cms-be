@@ -15,6 +15,7 @@ const PostLink = require("./PostLink");
 const UserSheetPermission = require("./UserSheetPermission");
 const Review = require("./Review");
 const FeaturedDeal = require("./FeaturedDeal");
+const Banner = require("./Banner");
 
 // User - Post associations
 Post.belongsTo(User, { as: "creator", foreignKey: "created_by" });
@@ -87,5 +88,6 @@ module.exports = {
   FooterLink,
   Review,
   FeaturedDeal,
+  Banner,
   UserSheetPermission,
 };

@@ -34,5 +34,7 @@ const upload = multer({ storage: createStorage() });
 // Specialized uploads
 upload.category = multer({ storage: createStorage('categories') });
 upload.image = multer({ storage: createStorage('images') });
+upload.parentCategory = multer({ storage: createStorage('parent-categories') });
+upload.banner = multer({ storage: createStorage('banners') });
 
 module.exports = upload;
