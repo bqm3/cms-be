@@ -90,6 +90,10 @@ const Post = sequelize.define(
       type: DataTypes.TEXT,
       allowNull: true,
     },
+    is_hot: {
+      type: DataTypes.BOOLEAN,
+      defaultValue: false,
+    },
   },
   {
     timestamps: true,

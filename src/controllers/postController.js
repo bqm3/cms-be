@@ -275,6 +275,9 @@ exports.createPost = async (req, res) => {
       // ✅ hidden
       is_hidden: parseBool(is_hidden),
 
+      // ✅ is_hot
+      is_hot: parseBool(req.body.is_hot),
+
       // ✅ meta
       ...finalMeta,
 
@@ -421,6 +424,7 @@ exports.copyPost = async (req, res) => {
           meta_description: post.meta_description || "",
           created_by: req.user.id,
           is_hidden: !!post.is_hidden,
+          is_hot: !!post.is_hot,
           is_approved: req.user.role === "admin",
         }),
       );
@@ -475,6 +479,10 @@ exports.updatePost = async (req, res) => {
 
     if (is_hidden !== undefined) {
       post.is_hidden = parseBool(is_hidden);
+    }
+
+    if (req.body.is_hot !== undefined) {
+      post.is_hot = parseBool(req.body.is_hot);
     }
 
     // title/content/category/topic
