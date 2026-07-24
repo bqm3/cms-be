@@ -26,7 +26,7 @@ exports.getAllCategories = async (req, res) => {
       const offset = (page - 1) * limit;
       const { count, rows: categories } = await Category.findAndCountAll({
         where,
-        include: [{ model: ParentCategory, as: "parent", attributes: ["name", "id"] }],
+        include: [{ model: ParentCategory, as: "parent", attributes: ["name", "name_vi", "id"] }],
         order: [
           ["sequence_number", "ASC"],
           ["name", "ASC"],
@@ -44,7 +44,7 @@ exports.getAllCategories = async (req, res) => {
 
     const categories = await Category.findAll({
       where,
-      include: [{ model: ParentCategory, as: "parent", attributes: ["name", "id"] }],
+      include: [{ model: ParentCategory, as: "parent", attributes: ["name", "name_vi", "id"] }],
       order: [
         ["sequence_number", "ASC"],
         ["name", "ASC"],
@@ -61,8 +61,8 @@ exports.getAllCategories = async (req, res) => {
 
 exports.createCategory = async (req, res) => {
   try {
-    const { name, slug, parent_id, sequence_number } = req.body;
-    const category = await Category.create({ name, slug, parent_id, sequence_number });
+    const { name, name_vi, slug, parent_id, sequence_number } = req.body;
+    const category = await Category.create({ name, name_vi, slug, parent_id, sequence_number });
     res.status(201).json(category);
   } catch (err) {
     if (err.name === "SequelizeValidationError" || err.name === "SequelizeUniqueConstraintError") {
@@ -74,11 +74,12 @@ exports.createCategory = async (req, res) => {
 
 exports.updateCategory = async (req, res) => {
   try {
-    const { name, slug, parent_id, sequence_number } = req.body;
+    const { name, name_vi, slug, parent_id, sequence_number } = req.body;
     const category = await Category.findOne({ where: { id: req.params.id, is_deleted: 0 } });
     if (!category) return res.status(404).json({ message: "Category not found" });
 
     category.name = name || category.name;
+    if (name_vi !== undefined) category.name_vi = name_vi;
     category.slug = slug || category.slug;
     if (parent_id !== undefined) category.parent_id = parent_id;
     if (sequence_number !== undefined) category.sequence_number = sequence_number;

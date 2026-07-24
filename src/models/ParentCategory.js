@@ -15,6 +15,10 @@ const ParentCategory = sequelize.define(
       type: DataTypes.STRING,
       allowNull: false,
     },
+    name_vi: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
     slug: {
       type: DataTypes.STRING,
       allowNull: false,
