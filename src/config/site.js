@@ -1,12 +1,17 @@
 const canonicalSiteUrl = (process.env.SITE_URL || "https://couponzas.com").replace(/\/+$/, "");
 
-const extraAllowedOrigins = (process.env.ALLOWED_ORIGINS || "https://globalpromotionllc.com")
+const extraAllowedOrigins = (process.env.ALLOWED_ORIGINS || "https://couponzas.com")
   .split(",")
   .map((origin) => origin.trim())
   .filter(Boolean);
 
-function normalizeOrigin(value) {
-  return String(value || "").trim().toLowerCase().replace(/\/+$/, "");
+function normalizeOrigin(origin) {
+  try {
+    const url = new URL(origin);
+    return url.origin.toLowerCase();
+  } catch {
+    return "";
+  }
 }
 
 const allowedOrigins = [
