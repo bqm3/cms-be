@@ -18,6 +18,20 @@ function normalizeSlugInput(slugInput, fallbackTitle) {
   return generateSlug(fallbackTitle);
 }
 
+function normalizeIdentifierForLookup(identifier) {
+  const raw = String(identifier ?? "")
+    .trim()
+    .replace(/^\/+|\/+$/g, "");
+
+  if (!raw) return "";
+
+  try {
+    return slugify(decodeURIComponent(raw), { lower: true, strict: true });
+  } catch {
+    return slugify(raw, { lower: true, strict: true });
+  }
+}
+
 function buildAutoMetaFromTitle(titleRaw, topicName = null) {
   const t = String(titleRaw || "").trim();
   if (!t) return { meta_title: null, meta_keyword: null, meta_description: null };
@@ -173,19 +187,57 @@ exports.getPublicPosts = async (req, res) => {
 exports.getPostDetail = async (req, res) => {
   try {
     const { identifier } = req.params;
-    const isNumeric = /^\d+$/.test(identifier);
+    const rawIdentifier = String(identifier ?? "").trim();
+    const normalizedIdentifier = normalizeIdentifierForLookup(rawIdentifier);
+    const isNumeric = /^\d+$/.test(rawIdentifier);
+    const include = [
+      { model: User, as: "creator", attributes: ["username"] },
+      { model: Category, as: "category", attributes: ["name"] },
+      { model: PostLink, as: "links" },
+    ];
 
-    const post = await Post.findOne({
+    const slugCandidates = Array.from(
+      new Set([rawIdentifier, normalizedIdentifier].filter(Boolean)),
+    );
+
+    let post = await Post.findOne({
       where: {
-        ...(isNumeric ? { [Op.or]: [{ id: identifier }, { slug: identifier }] } : { slug: identifier }),
         is_deleted: 0,
+        ...(isNumeric
+          ? { [Op.or]: [{ id: rawIdentifier }, ...slugCandidates.map((slug) => ({ slug }))] }
+          : { slug: { [Op.in]: slugCandidates } }),
       },
-      include: [
-        { model: User, as: "creator", attributes: ["username"] },
-        { model: Category, as: "category", attributes: ["name"] },
-        { model: PostLink, as: "links" },
-      ],
+      include,
     });
+
+    if (!post && !isNumeric && normalizedIdentifier) {
+      const fallbackCandidates = await Post.findAll({
+        where: {
+          is_deleted: 0,
+          [Op.or]: [
+            { slug: { [Op.like]: `%${normalizedIdentifier}%` } },
+            { title: { [Op.like]: `%${rawIdentifier}%` } },
+            { meta_title: { [Op.like]: `%${rawIdentifier}%` } },
+          ],
+        },
+        include,
+        order: [
+          ["is_hidden", "ASC"],
+          ["is_approved", "DESC"],
+          ["updated_at", "DESC"],
+          ["id", "DESC"],
+        ],
+      });
+
+      post =
+        fallbackCandidates.find((item) => {
+          const normalizedPostSlug = normalizeIdentifierForLookup(item.slug || "");
+          const normalizedTitleSlug = normalizeIdentifierForLookup(item.title || "");
+          return normalizedPostSlug === normalizedIdentifier || normalizedTitleSlug === normalizedIdentifier;
+        }) ||
+        fallbackCandidates[0] ||
+        null;
+    }
 
     if (!post) return res.status(404).json({ message: "Post not found" });
 
