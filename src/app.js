@@ -35,18 +35,15 @@ const app = express();
  */
 const corsOptions = {
   origin: function (origin, cb) {
-    // Allow server-to-server/curl/postman (origin undefined)
     if (!origin) return cb(null, true);
-
-    if (allowedOrigins.includes(normalizeOrigin(origin))) return cb(null, true);
-
+    const normalized = normalizeOrigin(origin);
+    const isAllowed = allowedOrigins.includes(normalized);
+    if (isAllowed) return cb(null, true);
     return cb(new Error("Not allowed by CORS: " + origin));
   },
   credentials: true,
   methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-  allowedHeaders: ["Content-Type", "Authorization"],
-  exposedHeaders: ["Content-Length"],
-  optionsSuccessStatus: 200,
+  allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With"],
 };
 
 app.set("trust proxy", 1);
