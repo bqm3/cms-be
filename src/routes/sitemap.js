@@ -41,7 +41,9 @@ module.exports = function sitemapRouter(opts = {}) {
       const posts = await Post.findAll({
         attributes: ["slug", "updated_at"],
         where: {
+          is_approved: true,
           is_deleted: 0,
+          is_hidden: false,
           [Op.and]: [
             { slug: { [Op.ne]: null } },
             { slug: { [Op.ne]: "" } },

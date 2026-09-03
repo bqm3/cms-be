@@ -86,6 +86,22 @@ app.get("/robots.txt", (req, res) => {
   res.type("text/plain").send(
     `User-agent: *
 Allow: /
+Disallow: /login
+Disallow: /dashboard
+Disallow: /editor/
+Disallow: /module/
+Disallow: /preview
+Disallow: /categories
+Disallow: /parent-categories
+Disallow: /users
+Disallow: /sheets
+Disallow: /media
+Disallow: /footer-links
+Disallow: /reviews
+Disallow: /featured-deals
+Disallow: /banners
+Disallow: /template-dashboard
+Disallow: /template-editor/
 
 Sitemap: ${canonicalSiteUrl}/sitemap.xml
 `,

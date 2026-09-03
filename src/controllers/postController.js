@@ -190,6 +190,8 @@ exports.getPostDetail = async (req, res) => {
     const rawIdentifier = String(identifier ?? "").trim();
     const normalizedIdentifier = normalizeIdentifierForLookup(rawIdentifier);
     const isNumeric = /^\d+$/.test(rawIdentifier);
+    const isPreviewRequest =
+      req.query.preview === "true" || req.query.is_editor === "true";
     const include = [
       { model: User, as: "creator", attributes: ["username"] },
       { model: Category, as: "category", attributes: ["name"] },
@@ -203,6 +205,12 @@ exports.getPostDetail = async (req, res) => {
     let post = await Post.findOne({
       where: {
         is_deleted: 0,
+        ...(isPreviewRequest
+          ? {}
+          : {
+              is_approved: true,
+              is_hidden: false,
+            }),
         ...(isNumeric
           ? { [Op.or]: [{ id: rawIdentifier }, ...slugCandidates.map((slug) => ({ slug }))] }
           : { slug: { [Op.in]: slugCandidates } }),
@@ -214,6 +222,12 @@ exports.getPostDetail = async (req, res) => {
       const fallbackCandidates = await Post.findAll({
         where: {
           is_deleted: 0,
+          ...(isPreviewRequest
+            ? {}
+            : {
+                is_approved: true,
+                is_hidden: false,
+              }),
           [Op.or]: [
             { slug: { [Op.like]: `%${normalizedIdentifier}%` } },
             { title: { [Op.like]: `%${rawIdentifier}%` } },
