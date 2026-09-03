@@ -4,6 +4,8 @@ const { Op } = require("sequelize");
 
 const Post = require("../models/Post");
 const Category = require("../models/Category");
+const ParentCategory = require("../models/ParentCategory");
+const Review = require("../models/Review");
 const { canonicalSiteUrl } = require("../config/site");
 
 function escXml(s = "") {
@@ -54,8 +56,21 @@ module.exports = function sitemapRouter(opts = {}) {
         raw: true,
       });
 
-      const cats = await Category.findAll({
+      const parentCats = await ParentCategory.findAll({
         attributes: ["slug", "updated_at"],
+        where: {
+          is_deleted: 0,
+          [Op.and]: [
+            { slug: { [Op.ne]: null } },
+            { slug: { [Op.ne]: "" } },
+          ],
+        },
+        order: [["updated_at", "DESC"]],
+        raw: true,
+      });
+
+      const cats = await Category.findAll({
+        attributes: ["slug", "parent_id", "updated_at"],
         where: {
           is_deleted: 0,
           [Op.and]: [
@@ -68,19 +83,51 @@ module.exports = function sitemapRouter(opts = {}) {
         raw: true,
       });
 
+      const reviews = await Review.findAll({
+        attributes: ["slug", "updated_at"],
+        where: {
+          is_deleted: 0,
+          [Op.and]: [
+            { slug: { [Op.ne]: null } },
+            { slug: { [Op.ne]: "" } },
+          ],
+        },
+        order: [["updated_at", "DESC"]],
+        raw: true,
+      });
+
       const urls = [];
 
+      // Static pages
       urls.push({ loc: `${origin}/`, changefreq: "daily", priority: "1.0" });
+      urls.push({ loc: `${origin}/category`, changefreq: "daily", priority: "0.8" });
+      urls.push({ loc: `${origin}/review`, changefreq: "weekly", priority: "0.8" });
+      urls.push({ loc: `${origin}/about-us`, changefreq: "monthly", priority: "0.5" });
+      urls.push({ loc: `${origin}/privacy-policy`, changefreq: "monthly", priority: "0.3" });
+      urls.push({ loc: `${origin}/terms`, changefreq: "monthly", priority: "0.3" });
+      urls.push({ loc: `${origin}/contact`, changefreq: "monthly", priority: "0.5" });
 
-      for (const c of cats) {
+      // Parent Categories
+      for (const pc of parentCats) {
         urls.push({
-          loc: `${origin}/category/${encodeURIComponent(c.slug)}`,
-          lastmod: toIsoDate(c.updated_at),
+          loc: `${origin}/category/${encodeURIComponent(pc.slug)}`,
+          lastmod: toIsoDate(pc.updated_at),
           changefreq: "weekly",
           priority: "0.7",
         });
       }
 
+      // Reviews
+      for (const r of reviews) {
+        urls.push({
+          loc: `${origin}/review/${encodeURIComponent(r.slug)}`,
+          lastmod: toIsoDate(r.updated_at),
+          changefreq: "weekly",
+          priority: "0.7",
+        });
+      }
+
+      // Posts
       for (const p of posts) {
         urls.push({
           loc: `${origin}/${encodeURIComponent(p.slug)}`,
