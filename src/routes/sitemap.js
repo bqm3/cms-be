@@ -70,7 +70,7 @@ module.exports = function sitemapRouter(opts = {}) {
       });
 
       const cats = await Category.findAll({
-        attributes: ["slug", "parent_id", "updated_at"],
+        attributes: ["slug", "updated_at"],
         where: {
           is_deleted: 0,
           [Op.and]: [
@@ -96,24 +96,34 @@ module.exports = function sitemapRouter(opts = {}) {
         raw: true,
       });
 
+      const latestUpdate = posts[0]?.updated_at
+        ? toIsoDate(posts[0].updated_at)
+        : toIsoDate(new Date());
+
       const urls = [];
 
-      // Static pages
-      urls.push({ loc: `${origin}/`, changefreq: "daily", priority: "1.0" });
-      urls.push({ loc: `${origin}/category`, changefreq: "daily", priority: "0.8" });
-      urls.push({ loc: `${origin}/review`, changefreq: "weekly", priority: "0.8" });
-      urls.push({ loc: `${origin}/about-us`, changefreq: "monthly", priority: "0.5" });
-      urls.push({ loc: `${origin}/privacy-policy`, changefreq: "monthly", priority: "0.3" });
-      urls.push({ loc: `${origin}/terms`, changefreq: "monthly", priority: "0.3" });
-      urls.push({ loc: `${origin}/contact`, changefreq: "monthly", priority: "0.5" });
+      // Static pages with lastmod
+      urls.push({ loc: `${origin}/`, lastmod: latestUpdate });
+      urls.push({ loc: `${origin}/category`, lastmod: latestUpdate });
+      urls.push({ loc: `${origin}/review`, lastmod: latestUpdate });
+      urls.push({ loc: `${origin}/about-us`, lastmod: latestUpdate });
+      urls.push({ loc: `${origin}/privacy-policy`, lastmod: latestUpdate });
+      urls.push({ loc: `${origin}/terms`, lastmod: latestUpdate });
+      urls.push({ loc: `${origin}/contact`, lastmod: latestUpdate });
 
       // Parent Categories
       for (const pc of parentCats) {
         urls.push({
           loc: `${origin}/category/${encodeURIComponent(pc.slug)}`,
           lastmod: toIsoDate(pc.updated_at),
-          changefreq: "weekly",
-          priority: "0.7",
+        });
+      }
+
+      // Child Categories
+      for (const c of cats) {
+        urls.push({
+          loc: `${origin}/category/${encodeURIComponent(c.slug)}`,
+          lastmod: toIsoDate(c.updated_at),
         });
       }
 
@@ -122,8 +132,6 @@ module.exports = function sitemapRouter(opts = {}) {
         urls.push({
           loc: `${origin}/review/${encodeURIComponent(r.slug)}`,
           lastmod: toIsoDate(r.updated_at),
-          changefreq: "weekly",
-          priority: "0.7",
         });
       }
 
@@ -132,8 +140,6 @@ module.exports = function sitemapRouter(opts = {}) {
         urls.push({
           loc: `${origin}/${encodeURIComponent(p.slug)}`,
           lastmod: toIsoDate(p.updated_at),
-          changefreq: "weekly",
-          priority: "0.8",
         });
       }
 
@@ -143,9 +149,7 @@ module.exports = function sitemapRouter(opts = {}) {
         urls
           .map((u) => {
             const lastmod = u.lastmod ? `<lastmod>${escXml(u.lastmod)}</lastmod>` : "";
-            const changefreq = u.changefreq ? `<changefreq>${escXml(u.changefreq)}</changefreq>` : "";
-            const priority = u.priority ? `<priority>${escXml(u.priority)}</priority>` : "";
-            return `<url><loc>${escXml(u.loc)}</loc>${lastmod}${changefreq}${priority}</url>`;
+            return `<url><loc>${escXml(u.loc)}</loc>${lastmod}</url>`;
           })
           .join("") +
         `</urlset>`;
